@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Royal Breakfast POS</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#f7f3e8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Royal Breakfast" />
+  <link rel="apple-touch-icon" href="royal_breakfast.png" />
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg: #f7f3e8;
+      --panel: rgba(255,255,255,0.95);
+      --gold: #b58a1e;
+      --text: #2d2416;
+      --muted: #6f634d;
+      --line: rgba(45,36,22,0.12);
+      --danger: #b1402c;
+      --success: #2e7a49;
+      --secondary: #635948;
+      --shadow: 0 12px 28px rgba(0,0,0,0.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(rgba(247,243,232,0.76), rgba(247,243,232,0.88)),
+        url("royal_breakfast.png") center 8px / 520px no-repeat,
+        var(--bg);
+    }
+    .wrap { max-width: 1320px; margin: 0 auto; padding: 300px 16px 32px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(5px); }
+    .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .tab-btn, .btn, .small-btn {
+      border: 0; border-radius: 16px; cursor: pointer; transition: transform 0.05s ease, opacity 0.2s ease;
+    }
+    .tab-btn:active, .btn:active, .small-btn:active { transform: scale(0.98); }
+    .tab-btn { min-height: 52px; font-size: 16px; font-weight: 800; background: #fff; color: var(--text); border: 1px solid var(--line); }
+    .tab-btn.active { background: linear-gradient(180deg, #c89c29, var(--gold)); color: #fff; border-color: transparent; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .section { padding: 16px; margin-bottom: 16px; }
+    .section-title { margin: 0 0 12px; font-size: 18px; font-weight: 900; }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .grid-4, .grid-3, .grid-2 { display: grid; gap: 12px; }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .field { text-align: left; }
+    .field label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .field input, .field select {
+      width: 100%; height: 48px; border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 0 12px; font-size: 16px; color: var(--text);
+    }
+    .status-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .pill { padding: 10px 12px; border-radius: 999px; background: #fff; border: 1px solid var(--line); font-size: 14px; }
+    .btn { min-height: 52px; font-size: 16px; font-weight: 800; color: #fff; background: var(--gold); }
+    .btn.success { background: var(--success); }
+    .btn.secondary { background: var(--secondary); }
+    .btn.danger { background: var(--danger); }
+    .small-btn { min-height: 40px; font-size: 13px; font-weight: 800; padding: 0 12px; background: #fff; border: 1px solid var(--line); color: var(--text); }
+    .small-btn.danger { background: #f8e3de; color: #7a2b1d; border-color: #e8c2b8; }
+    .product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .product-btn {
+      min-height: 124px; padding: 14px; border-radius: 18px; border: 0; background: linear-gradient(180deg, #c89c29, var(--gold)); color: #fff; font-size: 22px; font-weight: 900; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22); cursor: pointer;
+    }
+    .product-btn small { display: block; margin-top: 8px; font-size: 17px; font-weight: 800; }
+    .sales-layout { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; font-size: 14px; vertical-align: top; }
+    .empty { padding: 14px; color: var(--muted); font-style: italic; }
+    .total-box { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 16px; margin-top: 12px; border-radius: 16px; background: #fff; border: 1px solid var(--line); }
+    .total-label { color: var(--muted); font-size: 14px; }
+    .total-value { font-size: 34px; font-weight: 900; }
+    .cart-tools, .action-stack { display: grid; gap: 10px; margin-top: 12px; }
+    .cart-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .qr-box { margin-top: 14px; padding: 16px; border-radius: 16px; border: 1px dashed rgba(45,36,22,0.2); background: rgba(255,255,255,0.80); text-align: center; }
+    .qr-box img, .qr-box canvas { display: block; width: 240px; max-width: 100%; margin: 12px auto 0; background: #fff; padding: 8px; border-radius: 10px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .kpi { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+    .kpi .name { color: var(--muted); font-size: 13px; }
+    .kpi .value { margin-top: 4px; font-size: 28px; font-weight: 900; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .toolbar > * { flex: 1 1 180px; }
+    .note-box { padding: 12px; border-radius: 12px; background: #fff; border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+    .sync-ok { color: var(--success); font-weight: 700; }
+    .sync-warn { color: #9f6a00; font-weight: 700; }
+    @media (max-width: 980px) {
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sales-layout { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      body { background-size: 320px; }
+      .wrap { padding-top: 220px; }
+      .tabs, .grid-4, .grid-3, .grid-2, .product-grid, .cart-tools, .summary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="loginTab" type="button">Login</button>
+      <button class="tab-btn" data-tab="salesTab" type="button">Sales</button>
+      <button class="tab-btn" data-tab="statisticsTab" type="button">Statistics</button>
+    </div>
+
+    <section id="loginTab" class="tab-pane active">
+      <div class="section card">
+        <h2 class="section-title">Login and local profile</h2>
+        <div class="grid-4">
+          <div class="field"><label for="sellerName">Seller name</label><input id="sellerName" type="text" placeholder="Enter seller name" /></div>
+          <div class="field"><label for="stationName">Station name</label><input id="stationName" type="text" placeholder="Enter station name" /></div>
+          <div class="field"><label for="swishNumber">Swish number</label><input id="swishNumber" type="tel" inputmode="numeric" placeholder="07xxxxxxxxx" /></div>
+          <div class="field"><label for="activeDay">Active day</label><input id="activeDay" type="date" /></div>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <button id="saveSetupBtn" class="btn success" type="button">Login</button>
+          <div></div>
+        </div>
+        <div class="status-row">
+          <div class="pill">Seller: <strong id="sellerBadge">Not set</strong></div>
+          <div class="pill">Station: <strong id="stationBadge">Not set</strong></div>
+          <div class="pill">Swish: <strong id="swishBadge">Not set</strong></div>
+          <div class="pill">Day: <strong id="dayBadge">-</strong></div>
+          <div class="pill">Sync: <strong id="syncBadge" class="sync-warn">Connecting...</strong></div>
+        </div>
+        <div class="note-box" style="margin-top:12px;">
+          Firebase is embedded in this version of the app. Users no longer need to enter any Firebase settings. All products, sales, leaderboards and charts sync live across phones through the shared Firestore database.
+        </div>
+      </div>
+
+      <div class="section card">
+        <h2 class="section-title">Manage shared products</h2>
+        <div class="grid-2" style="margin-bottom:12px;">
+          <button id="seedProductsBtn" class="btn secondary" type="button">Seed default products</button>
+          <div></div>
+        </div>
+        <div class="grid-3">
+          <div class="field"><label for="newProductName">Product name</label><input id="newProductName" type="text" placeholder="Example: Juice" /></div>
+          <div class="field"><label for="newProductPrice">Price (kr)</label><input id="newProductPrice" type="number" min="0" step="1" placeholder="30" /></div>
+          <button id="addProductBtn" class="btn" type="button">Add shared product</button>
+        </div>
+        <table style="margin-top:12px;">
+          <thead><tr><th>Product</th><th>Price</th><th>Action</th></tr></thead>
+          <tbody id="productAdminBody"></tbody>
+        </table>
+        <div id="productAdminEmpty" class="empty">No shared products configured.</div>
+      </div>
+    </section>
+
+    <section id="salesTab" class="tab-pane">
+      <div class="sales-layout">
+        <div>
+          <div class="section card">
+            <h2 class="section-title">Register order</h2>
+            <div id="productGrid" class="product-grid"></div>
+            <div id="productGridEmpty" class="empty">No shared products available yet.</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section card">
+            <h2 class="section-title">Current order</h2>
+            <table>
+              <thead><tr><th>Item</th><th>Price</th><th>Action</th></tr></thead>
+              <tbody id="cartBody"></tbody>
+            </table>
+            <div id="cartEmpty" class="empty">No items in the basket.</div>
+
+            <div class="grid-2" style="margin-top:12px;">
+              <div class="field"><label for="discountAmount">Discount in kr</label><input id="discountAmount" type="number" min="0" step="1" value="0" /></div>
+              <button id="applyDiscountBtn" class="btn secondary" type="button" style="align-self:end;">Apply discount</button>
+            </div>
+
+            <div class="cart-tools">
+              <button id="removeLastBtn" class="small-btn danger" type="button">Remove last item</button>
+              <button id="clearCartBtn" class="small-btn" type="button">Clear order</button>
+              <button id="clearDiscountBtn" class="small-btn" type="button">Clear discount</button>
+            </div>
+
+            <div class="total-box">
+              <div>
+                <div class="total-label">Order total</div>
+                <div class="muted">Discount: <span id="discountPreview">0</span> kr</div>
+              </div>
+              <div class="total-value"><span id="cartTotal">0</span> kr</div>
+            </div>
+
+            <div class="action-stack">
+              <button id="payBtn" class="btn success" type="button">Generate Swish payment</button>
+              <button id="cashBtn" class="btn secondary" type="button">Complete as cash / already paid</button>
+            </div>
+
+            <div class="qr-box">
+              <strong>Swish payment</strong>
+              <div id="qrHelp" class="muted">Enter seller name, station, and Swish number, then create an order.</div>
+              <div id="qrWrap"></div>
+              <div id="swishLinkWrap"></div>
+            </div>
+          </div>
+
+          <div class="section card">
+            <h2 class="section-title">Live day overview</h2>
+            <div class="summary-grid">
+              <div class="kpi"><div class="name">Revenue</div><div id="todayRevenue" class="value">0 kr</div></div>
+              <div class="kpi"><div class="name">Orders</div><div id="todayOrders" class="value">0</div></div>
+              <div class="kpi"><div class="name">Items sold</div><div id="todayItems" class="value">0</div></div>
+              <div class="kpi"><div class="name">Discounts</div><div id="todayDiscounts" class="value">0 kr</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="statisticsTab" class="tab-pane">
+      <div class="section card">
+        <h2 class="section-title">Live shared sales</h2>
+        <div class="toolbar">
+          <input id="historyDaySelect" type="date" />
+          <button id="viewHistoryBtn" class="small-btn" type="button">Reload selected day</button>
+          <button id="exportHistoryBtn" class="small-btn" type="button">Export selected day</button>
+          <button id="deleteHistoryBtn" class="small-btn danger" type="button">Delete selected day</button>
+        </div>
+        <table>
+          <thead><tr><th>Time</th><th>Seller</th><th>Station</th><th>Payment</th><th>Product</th><th>Gross</th><th>Discount</th><th>Net</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+        <div id="historyEmpty" class="empty">No shared sales for the selected day.</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="section card">
+          <h2 class="section-title">Live seller leaderboard</h2>
+          <table>
+            <thead><tr><th>Rank</th><th>Seller</th><th>Orders</th><th>Revenue</th><th>Discounts</th></tr></thead>
+            <tbody id="sellerSummaryBody"></tbody>
+          </table>
+          <div id="sellerSummaryEmpty" class="empty">No seller statistics available for the selected day.</div>
+        </div>
+        <div class="section card">
+          <h2 class="section-title">Live station leaderboard</h2>
+          <table>
+            <thead><tr><th>Rank</th><th>Station</th><th>Orders</th><th>Revenue</th><th>Discounts</th></tr></thead>
+            <tbody id="stationSummaryBody"></tbody>
+          </table>
+          <div id="stationSummaryEmpty" class="empty">No station statistics available for the selected day.</div>
+        </div>
+      </div>
+
+      <div class="section card">
+        <h2 class="section-title">Live chart across all phones</h2>
+        <canvas id="salesChart" height="110"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      doc,
+      deleteDoc,
+      onSnapshot,
+      query,
+      where,
+      orderBy,
+      serverTimestamp,
+      getDocs,
+      writeBatch
+    } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+    const LOCAL_KEY = 'royal_breakfast_pos_firebase_embedded_v1';
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAfzRQox1YBs7fjkJHZSToIWwTegK3uC4U",
+      authDomain: "royal-breakfast.firebaseapp.com",
+      projectId: "royal-breakfast",
+      appId: "1:1001805199346:web:57d8acd397ceda13aa1d6b"
+    };
+    const DEFAULT_PRODUCTS = [
+      { name: 'Kaffe', price: 35 },
+      { name: 'Bulle', price: 25 },
+      { name: 'Macka', price: 25 }
+    ];
+
+    const localState = loadLocalState();
+    let cart = [];
+    let cartDiscount = 0;
+    let db = null;
+    let unsubscribeSales = null;
+    let unsubscribeProducts = null;
+    let sharedProducts = [];
+    let sharedSales = [];
+
+    const el = {
+      sellerName: document.getElementById('sellerName'),
+      stationName: document.getElementById('stationName'),
+      swishNumber: document.getElementById('swishNumber'),
+      activeDay: document.getElementById('activeDay'),
+      saveSetupBtn: document.getElementById('saveSetupBtn'),
+      seedProductsBtn: document.getElementById('seedProductsBtn'),
+      exportHistoryBtn: document.getElementById('exportHistoryBtn'),
+      deleteHistoryBtn: document.getElementById('deleteHistoryBtn'),
+      viewHistoryBtn: document.getElementById('viewHistoryBtn'),
+      sellerBadge: document.getElementById('sellerBadge'),
+      stationBadge: document.getElementById('stationBadge'),
+      swishBadge: document.getElementById('swishBadge'),
+      dayBadge: document.getElementById('dayBadge'),
+      syncBadge: document.getElementById('syncBadge'),
+      newProductName: document.getElementById('newProductName'),
+      newProductPrice: document.getElementById('newProductPrice'),
+      addProductBtn: document.getElementById('addProductBtn'),
+      productAdminBody: document.getElementById('productAdminBody'),
+      productAdminEmpty: document.getElementById('productAdminEmpty'),
+      productGrid: document.getElementById('productGrid'),
+      productGridEmpty: document.getElementById('productGridEmpty'),
+      cartBody: document.getElementById('cartBody'),
+      cartEmpty: document.getElementById('cartEmpty'),
+      cartTotal: document.getElementById('cartTotal'),
+      discountAmount: document.getElementById('discountAmount'),
+      applyDiscountBtn: document.getElementById('applyDiscountBtn'),
+      clearDiscountBtn: document.getElementById('clearDiscountBtn'),
+      discountPreview: document.getElementById('discountPreview'),
+      removeLastBtn: document.getElementById('removeLastBtn'),
+      clearCartBtn: document.getElementById('clearCartBtn'),
+      payBtn: document.getElementById('payBtn'),
+      cashBtn: document.getElementById('cashBtn'),
+      qrHelp: document.getElementById('qrHelp'),
+      qrWrap: document.getElementById('qrWrap'),
+      swishLinkWrap: document.getElementById('swishLinkWrap'),
+      todayRevenue: document.getElementById('todayRevenue'),
+      todayOrders: document.getElementById('todayOrders'),
+      todayItems: document.getElementById('todayItems'),
+      todayDiscounts: document.getElementById('todayDiscounts'),
+      historyDaySelect: document.getElementById('historyDaySelect'),
+      historyBody: document.getElementById('historyBody'),
+      historyEmpty: document.getElementById('historyEmpty'),
+      sellerSummaryBody: document.getElementById('sellerSummaryBody'),
+      sellerSummaryEmpty: document.getElementById('sellerSummaryEmpty'),
+      stationSummaryBody: document.getElementById('stationSummaryBody'),
+      stationSummaryEmpty: document.getElementById('stationSummaryEmpty'),
+      salesChart: document.getElementById('salesChart')
+    };
+
+    init();
+
+    function init() {
+      bindTabs();
+      bindEvents();
+      hydrateInputs();
+      renderLocalBadges();
+      renderCart();
+      connectFirebase();
+      registerServiceWorker();
+    }
+
+    function bindTabs() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(node => node.classList.remove('active'));
+          document.querySelectorAll('.tab-pane').forEach(node => node.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(btn.dataset.tab).classList.add('active');
+        });
+      });
+    }
+
+    function bindEvents() {
+      el.saveSetupBtn.addEventListener('click', saveLocalSetup);
+      el.seedProductsBtn.addEventListener('click', seedDefaultProducts);
+      el.addProductBtn.addEventListener('click', addSharedProduct);
+      el.applyDiscountBtn.addEventListener('click', applyDiscount);
+      el.clearDiscountBtn.addEventListener('click', clearDiscount);
+      el.removeLastBtn.addEventListener('click', removeLastItem);
+      el.clearCartBtn.addEventListener('click', clearCart);
+      el.payBtn.addEventListener('click', () => completeOrder('Swish'));
+      el.cashBtn.addEventListener('click', () => completeOrder('Cash'));
+      el.viewHistoryBtn.addEventListener('click', reloadDayListener);
+      el.exportHistoryBtn.addEventListener('click', () => exportDay(el.historyDaySelect.value));
+      el.deleteHistoryBtn.addEventListener('click', deleteSelectedDay);
+      el.activeDay.addEventListener('change', () => {
+        localState.activeDay = el.activeDay.value || todayISO();
+        el.historyDaySelect.value = localState.activeDay;
+        saveLocalState();
+        renderLocalBadges();
+        reloadDayListener();
+      });
+      el.historyDaySelect.addEventListener('change', () => {
+        localState.activeDay = el.historyDaySelect.value || todayISO();
+        el.activeDay.value = localState.activeDay;
+        saveLocalState();
+        renderLocalBadges();
+        reloadDayListener();
+      });
+    }
+
+    function loadLocalState() {
+      try {
+        const raw = localStorage.getItem(LOCAL_KEY);
+        if (!raw) return { sellerName: '', stationName: '', swishNumber: '', activeDay: todayISO() };
+        const parsed = JSON.parse(raw);
+        return {
+          sellerName: parsed.sellerName || '',
+          stationName: parsed.stationName || '',
+          swishNumber: parsed.swishNumber || '',
+          activeDay: parsed.activeDay || todayISO()
+        };
+      } catch {
+        return { sellerName: '', stationName: '', swishNumber: '', activeDay: todayISO() };
+      }
+    }
+
+    function saveLocalState() {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(localState));
+    }
+
+    function hydrateInputs() {
+      el.sellerName.value = localState.sellerName || '';
+      el.stationName.value = localState.stationName || '';
+      el.swishNumber.value = localState.swishNumber || '';
+      el.activeDay.value = localState.activeDay || todayISO();
+      el.historyDaySelect.value = localState.activeDay || todayISO();
+    }
+
+    function saveLocalSetup() {
+      localState.sellerName = el.sellerName.value.trim();
+      localState.stationName = el.stationName.value.trim();
+      localState.swishNumber = cleanSwishNumber(el.swishNumber.value);
+      localState.activeDay = el.activeDay.value || todayISO();
+      el.historyDaySelect.value = localState.activeDay;
+      saveLocalState();
+      renderLocalBadges();
+      showQrMessage('Login saved.');
+      reloadDayListener();
+    }
+
+    async function connectFirebase() {
+      try {
+        const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+        db = getFirestore(app);
+        setSyncBadge(true);
+        subscribeProducts();
+        reloadDayListener();
+      } catch (error) {
+        setSyncBadge(false, error.message);
+        alert(`Firebase connection failed: ${error.message}`);
+      }
+    }
+
+    function setSyncBadge(isConnected, message) {
+      el.syncBadge.textContent = isConnected ? 'Live' : 'Offline';
+      el.syncBadge.className = isConnected ? 'sync-ok' : 'sync-warn';
+      if (message) console.error(message);
+    }
+
+    function renderLocalBadges() {
+      el.sellerBadge.textContent = localState.sellerName || 'Not set';
+      el.stationBadge.textContent = localState.stationName || 'Not set';
+      el.swishBadge.textContent = localState.swishNumber || 'Not set';
+      el.dayBadge.textContent = localState.activeDay || todayISO();
+    }
+
+    function subscribeProducts() {
+      if (!db) return;
+      if (unsubscribeProducts) unsubscribeProducts();
+      const q = query(collection(db, 'products'), orderBy('name'));
+      unsubscribeProducts = onSnapshot(q, (snapshot) => {
+        sharedProducts = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+        renderProductAdmin();
+        renderProductButtons();
+        setSyncBadge(true);
+      }, (error) => {
+        setSyncBadge(false, error.message);
+      });
+    }
+
+    function reloadDayListener() {
+      if (!db) return;
+      if (unsubscribeSales) unsubscribeSales();
+      const day = localState.activeDay || todayISO();
+      const q = query(collection(db, 'sales'), where('day', '==', day), orderBy('createdAt'));
+      unsubscribeSales = onSnapshot(q, (snapshot) => {
+        sharedSales = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+        renderSharedSales();
+        setSyncBadge(true);
+      }, (error) => {
+        setSyncBadge(false, error.message);
+      });
+    }
+
+    async function seedDefaultProducts() {
+      if (!db) return alert('Firebase is not connected yet.');
+      const existing = await getDocs(collection(db, 'products'));
+      if (!existing.empty) {
+        alert('Products already exist in Firestore.');
+        return;
+      }
+      for (const product of DEFAULT_PRODUCTS) {
+        await addDoc(collection(db, 'products'), {
+          name: product.name,
+          price: product.price,
+          active: true,
+          createdAt: serverTimestamp()
+        });
+      }
+    }
+
+    async function addSharedProduct() {
+      if (!db) return alert('Firebase is not connected yet.');
+      const name = el.newProductName.value.trim();
+      const price = Number(el.newProductPrice.value);
+      if (!name) return alert('Enter a product name.');
+      if (!Number.isFinite(price) || price < 0) return alert('Enter a valid price in kr.');
+      await addDoc(collection(db, 'products'), {
+        name,
+        price,
+        active: true,
+        createdAt: serverTimestamp()
+      });
+      el.newProductName.value = '';
+      el.newProductPrice.value = '';
+    }
+
+    async function removeSharedProduct(productId) {
+      if (!db) return;
+      await deleteDoc(doc(db, 'products', productId));
+    }
+
+    function renderProductAdmin() {
+      el.productAdminBody.innerHTML = '';
+      sharedProducts.forEach(product => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHtml(product.name)}</td><td>${Number(product.price).toFixed(2)} kr</td><td><button class="small-btn danger" type="button">Remove</button></td>`;
+        tr.querySelector('button').addEventListener('click', () => removeSharedProduct(product.id));
+        el.productAdminBody.appendChild(tr);
+      });
+      el.productAdminEmpty.style.display = sharedProducts.length ? 'none' : 'block';
+    }
+
+    function renderProductButtons() {
+      el.productGrid.innerHTML = '';
+      sharedProducts.forEach(product => {
+        const button = document.createElement('button');
+        button.className = 'product-btn';
+        button.type = 'button';
+        button.innerHTML = `${escapeHtml(product.name)}<small>SEK ${Number(product.price).toFixed(2)}</small>`;
+        button.addEventListener('click', () => addItem(product));
+        el.productGrid.appendChild(button);
+      });
+      el.productGridEmpty.style.display = sharedProducts.length ? 'none' : 'block';
+    }
+
+    function addItem(product) {
+      cart.push({ productId: product.id, name: product.name, price: Number(product.price) });
+      renderCart();
+    }
+
+    function removeLastItem() {
+      cart.pop();
+      renderCart();
+    }
+
+    function clearCart() {
+      cart = [];
+      cartDiscount = 0;
+      el.discountAmount.value = '0';
+      renderCart();
+      showQrMessage('Order cleared.');
+    }
+
+    function applyDiscount() {
+      const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
+      const discount = Number(el.discountAmount.value || 0);
+      if (!Number.isFinite(discount) || discount < 0) return alert('Enter a valid discount in kr.');
+      cartDiscount = Math.min(discount, subtotal);
+      renderCart();
+    }
+
+    function clearDiscount() {
+      cartDiscount = 0;
+      el.discountAmount.value = '0';
+      renderCart();
+    }
+
+    function renderCart() {
+      el.cartBody.innerHTML = '';
+      const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
+      const total = Math.max(0, subtotal - cartDiscount);
+      cart.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHtml(item.name)}</td><td>${Number(item.price).toFixed(2)} kr</td><td><button class="small-btn danger" type="button">Remove</button></td>`;
+        tr.querySelector('button').addEventListener('click', () => {
+          cart.splice(index, 1);
+          cartDiscount = Math.min(cartDiscount, cart.reduce((sum, row) => sum + row.price, 0));
+          renderCart();
+        });
+        el.cartBody.appendChild(tr);
+      });
+      el.cartEmpty.style.display = cart.length ? 'none' : 'block';
+      el.discountPreview.textContent = String(Number(cartDiscount.toFixed(2)));
+      el.cartTotal.textContent = String(Number(total.toFixed(2)));
+    }
+
+    async function completeOrder(paymentMethod) {
+      if (!db) return alert('Firebase is not connected yet.');
+      const seller = (localState.sellerName || el.sellerName.value || '').trim();
+      const station = (localState.stationName || el.stationName.value || '').trim();
+      const swishNumber = cleanSwishNumber(localState.swishNumber || el.swishNumber.value || '');
+      const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
+      const total = Math.max(0, subtotal - cartDiscount);
+      if (!seller) return alert('Please enter seller name first.');
+      if (!station) return alert('Please enter station name first.');
+      if (!cart.length) return alert('No items in the order.');
+      if (paymentMethod === 'Swish' && !swishNumber) return alert('Please enter the Swish number first.');
+
+      const orderId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const time = nowTime();
+      const perItemDiscount = cart.length ? cartDiscount / cart.length : 0;
+
+      for (let i = 0; i < cart.length; i++) {
+        const item = cart[i];
+        const itemDiscount = cartDiscount === 0 ? 0 : (i === cart.length - 1 ? Number((cartDiscount - perItemDiscount * i).toFixed(2)) : Number(perItemDiscount.toFixed(2)));
+        const netPrice = Number(Math.max(0, item.price - itemDiscount).toFixed(2));
+        await addDoc(collection(db, 'sales'), {
+          day: localState.activeDay,
+          time,
+          orderId,
+          seller,
+          station,
+          paymentMethod,
+          productId: item.productId,
+          product: item.name,
+          grossPrice: Number(item.price.toFixed(2)),
+          discount: itemDiscount,
+          price: netPrice,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      if (paymentMethod === 'Swish') renderSwish(total, swishNumber, orderId);
+      else showQrMessage('Order saved as cash / already paid.');
+      cart = [];
+      cartDiscount = 0;
+      el.discountAmount.value = '0';
+      renderCart();
+    }
+
+    function renderSwish(total, swishNumber, orderId) {
+      const message = `Royal Breakfast ${localState.activeDay} ${orderId}`.slice(0, 50);
+      const swishUrl = `https://app.swish.nu/1/p/sw/?sw=${encodeURIComponent(swishNumber)}&amt=${encodeURIComponent(total.toFixed(2))}&msg=${encodeURIComponent(message)}`;
+      el.qrWrap.innerHTML = '';
+      el.swishLinkWrap.innerHTML = '';
+      el.qrHelp.innerHTML = `Payee <strong>${escapeHtml(swishNumber)}</strong> • Amount <strong>${total.toFixed(2)} kr</strong>`;
+      if (window.QRCode?.toCanvas) {
+        const canvas = document.createElement('canvas');
+        el.qrWrap.appendChild(canvas);
+        QRCode.toCanvas(canvas, swishUrl, { width: 240, margin: 1, errorCorrectionLevel: 'M' }, function(error) {
+          if (error) renderQrFallback(swishUrl);
+        });
+      } else {
+        renderQrFallback(swishUrl);
+      }
+      const link = document.createElement('a');
+      link.href = swishUrl;
+      link.textContent = `Open Swish payment for ${total.toFixed(2)} kr`;
+      link.style.display = 'inline-block';
+      link.style.marginTop = '10px';
+      link.style.fontWeight = '800';
+      link.style.color = '#0b5cab';
+      el.swishLinkWrap.appendChild(link);
+    }
+
+    function renderQrFallback(url) {
+      el.qrWrap.innerHTML = '';
+      const img = document.createElement('img');
+      img.alt = 'Swish QR code';
+      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
+      el.qrWrap.appendChild(img);
+    }
+
+    function showQrMessage(message) {
+      el.qrWrap.innerHTML = '';
+      el.swishLinkWrap.innerHTML = '';
+      el.qrHelp.textContent = message;
+    }
+
+    function renderSharedSales() {
+      el.historyBody.innerHTML = '';
+      sharedSales.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHtml(row.time)}</td><td>${escapeHtml(row.seller)}</td><td>${escapeHtml(row.station)}</td><td>${escapeHtml(row.paymentMethod || '-')}</td><td>${escapeHtml(row.product)}</td><td>${Number(row.grossPrice ?? row.price).toFixed(2)} kr</td><td>${Number(row.discount || 0).toFixed(2)} kr</td><td>${Number(row.price).toFixed(2)} kr</td>`;
+        el.historyBody.appendChild(tr);
+      });
+      el.historyEmpty.style.display = sharedSales.length ? 'none' : 'block';
+      renderTodayOverview();
+      renderLeaderboardTable(sharedSales, 'seller', el.sellerSummaryBody, el.sellerSummaryEmpty);
+      renderLeaderboardTable(sharedSales, 'station', el.stationSummaryBody, el.stationSummaryEmpty);
+      renderSalesChart(sharedSales);
+    }
+
+    function renderTodayOverview() {
+      const orders = new Set();
+      let revenue = 0;
+      let items = 0;
+      let discounts = 0;
+      sharedSales.forEach(row => {
+        orders.add(row.orderId);
+        revenue += Number(row.price || 0);
+        discounts += Number(row.discount || 0);
+        items += 1;
+      });
+      el.todayRevenue.textContent = `${Number(revenue.toFixed(2))} kr`;
+      el.todayOrders.textContent = String(orders.size);
+      el.todayItems.textContent = String(items);
+      el.todayDiscounts.textContent = `${Number(discounts.toFixed(2))} kr`;
+    }
+
+    function buildLeaderboard(sales, dimension) {
+      const summary = {};
+      sales.forEach(row => {
+        const key = String(row[dimension] || 'Unknown').trim() || 'Unknown';
+        if (!summary[key]) summary[key] = { name: key, orders: new Set(), revenue: 0, discounts: 0 };
+        summary[key].orders.add(row.orderId);
+        summary[key].revenue += Number(row.price || 0);
+        summary[key].discounts += Number(row.discount || 0);
+      });
+      return Object.values(summary)
+        .map(item => ({ name: item.name, orders: item.orders.size, revenue: Number(item.revenue.toFixed(2)), discounts: Number(item.discounts.toFixed(2)) }))
+        .sort((a, b) => b.revenue - a.revenue || b.orders - a.orders || a.name.localeCompare(b.name));
+    }
+
+    function renderLeaderboardTable(sales, dimension, tbody, emptyNode) {
+      const rows = buildLeaderboard(sales, dimension);
+      tbody.innerHTML = '';
+      rows.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${index + 1}</td><td>${escapeHtml(row.name)}</td><td>${row.orders}</td><td>${row.revenue} kr</td><td>${row.discounts} kr</td>`;
+        tbody.appendChild(tr);
+      });
+      emptyNode.style.display = rows.length ? 'none' : 'block';
+    }
+
+    function renderSalesChart(sales) {
+      const buckets = {};
+      sales.forEach(row => {
+        const label = String(row.time || '').slice(0, 5);
+        if (!buckets[label]) buckets[label] = 0;
+        buckets[label] += Number(row.price || 0);
+      });
+      const labels = Object.keys(buckets).sort();
+      const values = labels.map(label => Number(buckets[label].toFixed(2)));
+      if (window.salesChartInstance) window.salesChartInstance.destroy();
+      window.salesChartInstance = new Chart(el.salesChart, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Sales (kr)', data: values, tension: 0.25, fill: false, borderWidth: 3, pointRadius: 3 }] },
+        options: { responsive: true, maintainAspectRatio: true, scales: { x: { title: { display: true, text: 'Time' } }, y: { beginAtZero: true, title: { display: true, text: 'Sales (kr)' } } } }
+      });
+    }
+
+    async function deleteSelectedDay() {
+      if (!db) return alert('Firebase is not connected yet.');
+      const day = el.historyDaySelect.value || localState.activeDay;
+      if (!confirm(`Delete all shared sales for ${day}? This cannot be undone.`)) return;
+      const q = query(collection(db, 'sales'), where('day', '==', day));
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      snapshot.forEach(docSnap => batch.delete(docSnap.ref));
+      await batch.commit();
+    }
+
+    function exportDay(day) {
+      const sales = sharedSales;
+      const sellerLeaderboard = buildLeaderboard(sales, 'seller');
+      const stationLeaderboard = buildLeaderboard(sales, 'station');
+      let content = 'Sales\n';
+      content += 'Time\tSeller\tStation\tPayment\tProduct\tGross Price\tDiscount\tNet Price\n';
+      sales.forEach(row => {
+        content += `${safeTsv(row.time)}\t${safeTsv(row.seller)}\t${safeTsv(row.station)}\t${safeTsv(row.paymentMethod || '')}\t${safeTsv(row.product)}\t${row.grossPrice ?? row.price}\t${row.discount ?? 0}\t${row.price}\n`;
+      });
+      content += '\nSeller leaderboard\n';
+      content += 'Rank\tSeller\tOrders\tRevenue\tDiscounts\n';
+      sellerLeaderboard.forEach((row, index) => { content += `${index + 1}\t${safeTsv(row.name)}\t${row.orders}\t${row.revenue}\t${row.discounts}\n`; });
+      content += '\nStation leaderboard\n';
+      content += 'Rank\tStation\tOrders\tRevenue\tDiscounts\n';
+      stationLeaderboard.forEach((row, index) => { content += `${index + 1}\t${safeTsv(row.name)}\t${row.orders}\t${row.revenue}\t${row.discounts}\n`; });
+      const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `RoyalBreakfast_${day}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function cleanSwishNumber(value) { return String(value || '').replace(/\s+/g, '').replace(/[^0-9+]/g, ''); }
+    function todayISO() { return new Date().toLocaleDateString('sv-SE'); }
+    function nowTime() { return new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+    function safeTsv(value) { return String(value ?? '').replace(/\t/g, ' ').replace(/\n/g, ' '); }
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function registerServiceWorker() {
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

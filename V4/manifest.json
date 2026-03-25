@@ -1,0 +1,16 @@
+{
+  "name": "Royal Breakfast",
+  "short_name": "Breakfast",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "background_color": "#f7f3e8",
+  "theme_color": "#f7f3e8",
+  "icons": [
+    {
+      "src": "/royal_breakfast.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
