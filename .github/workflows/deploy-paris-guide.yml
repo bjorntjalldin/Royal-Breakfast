@@ -1,0 +1,28 @@
+# Publicerar paris-guide/ till Netlify-projektet "paris-turistguide" vid push.
+# Kräver repo-secret NETLIFY_AUTH_TOKEN (Netlify → User settings → Applications → Personal access tokens).
+# Utan secret hoppas deploy-steget över, så arbetsflödet blir aldrig rött i onödan.
+name: Deploy Paris-guiden to Netlify
+
+on:
+  push:
+    branches: ["main", "claude/paris-tourist-guide-app-wwy6i5"]
+    paths: ["paris-guide/**", "netlify.toml", ".github/workflows/deploy-paris-guide.yml"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 418903ab-963f-4a94-9457-4a911bcea392
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy to Netlify
+        if: env.NETLIFY_AUTH_TOKEN != ''
+        run: npx -y netlify-cli@latest deploy --prod --dir=paris-guide --site="$NETLIFY_SITE_ID" --message="GitHub Actions ${{ github.sha }}"
+      - name: Skipped
+        if: env.NETLIFY_AUTH_TOKEN == ''
+        run: echo "NETLIFY_AUTH_TOKEN saknas som repo-secret – deploy hoppas över."
