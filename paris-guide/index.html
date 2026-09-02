@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Paris-guiden – turistguide med karta, historia och metro</title>
+  <meta name="description" content="Svensk turistguide till Paris: 24 sevärdheter med historia, bilder och praktisk information, klickbar karta, avstånd och tunnelbana mellan platserna samt en dagsplanerare.">
+  <meta name="theme-color" content="#1B3A6B">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Paris">
+  <meta property="og:title" content="Paris-guiden">
+  <meta property="og:description" content="Sevärdheter, historia, karta, metro och dagsplan för ditt Parisbesök.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__in">
+      <a class="brand" href="#explore" aria-label="Paris-guiden, start">
+        <span class="plaque plaque--mini"><span class="plaque__arr">Guide</span><span class="plaque__name">Paris</span></span>
+        <span class="brand__name">Paris-guiden</span>
+      </a>
+      <div class="topbar__right">
+        <span id="weatherNow" hidden></span>
+        <span title="Lokal tid i Paris">Paris <b id="parisTime">–</b></span>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Huvudmeny">
+      <button class="tab is-active" role="tab" data-tab="explore" aria-selected="true">Utforska</button>
+      <button class="tab" role="tab" data-tab="map" aria-selected="false">Karta</button>
+      <button class="tab" role="tab" data-tab="plan" aria-selected="false">Planera <span id="planCount" class="count" hidden></span></button>
+      <button class="tab" role="tab" data-tab="info" aria-selected="false">Praktiskt</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Utforska -->
+    <section id="tab-explore" class="panel is-active" role="tabpanel">
+      <div class="hero">
+        <div class="plaque plaque--hero" aria-hidden="true">
+          <span class="plaque__arr">Ville de</span>
+          <span class="plaque__name">Paris</span>
+          <span class="plaque__sub">Guide för besökare</span>
+        </div>
+        <div class="hero__text">
+          <h1>Tjugofyra platser, deras historia och vägen dit.</h1>
+          <p>Välj sevärdheter, läs varför de finns och se hur långt det är emellan dem – till fots eller med metro. Bygg sedan din egen dag i planeraren.</p>
+          <div class="hero__facts">
+            <span><b>24</b> sevärdheter</span>
+            <span><b>17</b> metro- och RER-linjer</span>
+            <span><b>6</b> färdiga rutter</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Sök plats, konstnär eller tema…" aria-label="Sök bland sevärdheter">
+        <select id="sort" aria-label="Sortera">
+          <option value="name">Namn A–Ö</option>
+          <option value="arr">Arrondissement</option>
+          <option value="time">Kortast besök först</option>
+          <option value="near">Närmast mig</option>
+        </select>
+        <button id="nearBtn" class="btn btn--ghost">Nära mig</button>
+      </div>
+      <div id="catChips" class="chips" role="group" aria-label="Kategorier"></div>
+      <p id="resultCount" class="result-count"></p>
+      <div id="cardGrid" class="grid"></div>
+
+      <section class="routes" aria-labelledby="routesTitle">
+        <h2 id="routesTitle">Färdiga rutter</h2>
+        <p>Sex sätt att lägga upp dagen. Öppna en i planeraren och byt ut vad du vill.</p>
+        <div id="itineraries" class="routes__grid"></div>
+      </section>
+    </section>
+
+    <!-- Karta -->
+    <section id="tab-map" class="panel" role="tabpanel">
+      <div class="map-wrap">
+        <div id="map" role="application" aria-label="Karta över sevärdheter"></div>
+        <div class="map-ctrl">
+          <div class="map-ctrl__row">
+            <button id="mapFit" class="btn btn--sm">Hela staden</button>
+            <button id="mapLocate" class="btn btn--sm">Min position</button>
+            <label><input type="checkbox" id="mapPlanToggle" checked> Visa min plan</label>
+          </div>
+          <div id="mapLegend" class="legend"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Planera -->
+    <section id="tab-plan" class="panel" role="tabpanel">
+      <div class="plan-head">
+        <div>
+          <h2>Din dagsplan</h2>
+          <p>Lägg till platser, låt appen ordna dem efter kortast restid och se när du är klar.</p>
+        </div>
+        <div class="plan-tools">
+          <label>Start <input type="time" id="planStart" value="09:00"></label>
+          <button id="planOptimize" class="btn">Optimera ordningen</button>
+          <button id="planClear" class="btn btn--ghost">Rensa</button>
+        </div>
+      </div>
+      <div class="plan-layout">
+        <div class="plan-main">
+          <div id="planBody"></div>
+        </div>
+        <aside class="plan-side">
+          <div id="planSummary" class="summary" hidden></div>
+          <div class="plan-actions">
+            <button id="planMap" class="btn btn--ghost">Visa på kartan</button>
+            <button id="planCopy" class="btn btn--ghost">Kopiera som text</button>
+            <button id="planShare" class="btn btn--ghost">Dela länk</button>
+          </div>
+          <div class="plan-add">
+            <h3>Lägg till plats</h3>
+            <div id="planAdd" class="chips"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Praktiskt -->
+    <section id="tab-info" class="panel" role="tabpanel">
+      <h2>Praktiskt inför resan</h2>
+      <p>Det du behöver veta om biljetter, flygplatser, öppettider och hur parisare gör.</p>
+      <div class="info-layout">
+        <div id="infoSections"></div>
+        <aside>
+          <div id="forecastWrap" class="side-box" hidden>
+            <h3>Vädret i Paris</h3>
+            <div id="forecast" class="forecast"></div>
+          </div>
+          <div class="side-box">
+            <h3>Fraser som öppnar dörrar</h3>
+            <table class="phrases"><tbody id="phrases"></tbody></table>
+          </div>
+          <div class="side-box">
+            <h3>Linjerna i appen</h3>
+            <div id="lineLegend" class="line-legend"></div>
+            <p class="small" style="margin-top:.6rem">Restiderna bygger på ett förenklat nät med nyckelstationer. För exakta avgångar, använd Bonjour RATP eller Citymapper.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Innehållet är sammanställt som reseguide; priser och öppettider avser 2025/2026 och kan ändras. Kontrollera alltid på respektive officiell webbplats innan du planerar dagen.</p>
+    <p>Bilder hämtas från Wikimedia Commons under respektive fria licens – klicka på ”Bild: Wikimedia Commons” i detaljvyn för upphovsperson och licens. Kartdata © OpenStreetMap-bidragsgivare, kartbild © CARTO. Väder från Open-Meteo.</p>
+  </footer>
+
+  <dialog id="sheet" aria-label="Detaljer om sevärdhet">
+    <button id="sheetClose" class="dialog__close" aria-label="Stäng">×</button>
+    <div id="sheetBody"></div>
+  </dialog>
+  <dialog id="routeDlg" aria-label="Vägbeskrivning">
+    <button id="routeClose" class="dialog__close" aria-label="Stäng">×</button>
+    <div id="routeBody"></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="vendor/leaflet.js"></script>
+  <script src="data.js"></script>
+  <script src="transit.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

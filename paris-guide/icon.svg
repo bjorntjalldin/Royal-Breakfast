@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1B3A6B"/>
+  <rect x="40" y="40" width="432" height="432" rx="64" fill="none" stroke="#2E6B4F" stroke-width="22"/>
+  <rect x="66" y="66" width="380" height="380" rx="46" fill="none" stroke="#FFFFFF" stroke-width="8"/>
+  <text x="256" y="196" text-anchor="middle" font-family="Josefin Sans, Futura, Century Gothic, Arial, sans-serif" font-weight="700" font-size="40" letter-spacing="8" fill="#FFFFFF" opacity=".85">GUIDE</text>
+  <text x="256" y="330" text-anchor="middle" font-family="Josefin Sans, Futura, Century Gothic, Arial, sans-serif" font-weight="700" font-size="128" letter-spacing="10" fill="#FFFFFF">PARIS</text>
+  <path d="M150 392h212" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity=".6"/>
+</svg>
