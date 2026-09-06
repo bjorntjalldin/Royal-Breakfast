@@ -1,0 +1,14 @@
+# Statisk PWA – inget byggsteg. Publicera mappen som den är.
+[build]
+  publish = "."
+  command = "echo 'static site, no build'"
+
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
