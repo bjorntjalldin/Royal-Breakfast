@@ -3,10 +3,10 @@
   publish = "."
   command = "echo 'static site, no build'"
 
-# Firebase web-config (apiKey/appId) är publika identifierare, inte hemligheter –
-# åtkomst styrs av Firestore-reglerna. Undanta dem från Netlifys secrets-scanner.
+# Firebase web-config (apiKey/appId i firebase-config.js) är publika identifierare,
+# inte hemligheter – åtkomst styrs av Firestore-reglerna. Undanta filen från scannern.
 [build.environment]
-  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyAfzRQox1YBs7fjkJHZSToIWwTegK3uC4U,1:1001805199346:web:57d8acd397ceda13aa1d6b"
+  SECRETS_SCAN_OMIT_PATHS = "firebase-config.js"
 
 [[headers]]
   for = "/service-worker.js"

@@ -483,6 +483,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="calc.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
   <script type="module">
     const C = window.NotanCalc;
@@ -491,12 +492,8 @@
     // Konfiguration
     // ------------------------------------------------------------------
     const LS = { groups: 'notan.groups.v1', me: 'notan.me.v1', order: 'notan.order.v1', pending: 'notan.pending.v1' };
-    const FIREBASE_CONFIG = {
-      apiKey: "AIzaSyAfzRQox1YBs7fjkJHZSToIWwTegK3uC4U",
-      authDomain: "royal-breakfast.firebaseapp.com",
-      projectId: "royal-breakfast",
-      appId: "1:1001805199346:web:57d8acd397ceda13aa1d6b"
-    };
+    // Firebase-inställningarna ligger i firebase-config.js (eget projekt för Notan).
+    const FIREBASE_CONFIG = window.NOTAN_FIREBASE_CONFIG || null;
     const FIREBASE_VERSION = '12.10.0';
     const COLLECTION = 'splitGroups';
     const CURRENCIES = [['SEK', 'Svenska kronor'], ['NOK', 'Norska kronor'], ['DKK', 'Danska kronor'], ['EUR', 'Euro'], ['USD', 'US-dollar'], ['GBP', 'Brittiska pund']];
@@ -668,7 +665,7 @@
       const labels = { connecting: ['Ansluter…', ''], on: ['Live', 'on'], off: ['Lokal', ''], pending: ['Synkar…', 'pending'] };
       const status = state.fbStatus === 'on' && hasPending() ? 'pending' : state.fbStatus;
       const [text, cls] = labels[status] || labels.off;
-      for (const node of [el.homeSync, el.groupSync]) { node.textContent = text; node.className = `sync ${cls}`; node.title = status === 'on' ? 'Synkas live mellan alla i gruppen' : status === 'off' ? 'Ingen molnanslutning – sparas bara på den här enheten' : ''; }
+      for (const node of [el.homeSync, el.groupSync]) { node.textContent = text; node.className = `sync ${cls}`; node.title = status === 'on' ? 'Synkas live mellan alla i gruppen' : status === 'off' ? (hasFirebaseConfig() ? 'Ingen molnanslutning – sparas bara på den här enheten' : 'Molnsynk ej konfigurerad – sparas bara på den här enheten') : ''; }
     }
 
     function renderHome() {
@@ -812,7 +809,7 @@
         <div class="list">
           <div class="frow"><label for="groupNameInput">Namn</label><input id="groupNameInput" type="text" value="${esc(g.meta.name)}" autocomplete="off" /></div>
           <div class="frow"><label for="groupCurrencyInput">Valuta</label><select id="groupCurrencyInput">${CURRENCIES.map(([c, n]) => `<option value="${c}" ${c === g.meta.currency ? 'selected' : ''}>${c} – ${n}</option>`).join('')}</select></div>
-          <div class="frow"><label style="flex:1">Synkning</label><span style="color:var(--label2);font-size:15px">${state.fbStatus === 'on' ? 'Live via molnet' : state.fbStatus === 'connecting' ? 'Ansluter…' : 'Endast den här enheten'}</span></div>
+          <div class="frow"><label style="flex:1">Synkning</label><span style="color:var(--label2);font-size:15px">${state.fbStatus === 'on' ? 'Live via molnet' : state.fbStatus === 'connecting' ? 'Ansluter…' : hasFirebaseConfig() ? 'Endast den här enheten (offline)' : 'Ej konfigurerad – endast den här enheten'}</span></div>
         </div>
         <h2 class="section-h"><span>Deltagare</span><span>${mids.length}</span></h2>
         <div class="list">` + mids.map((id) => {
@@ -1130,7 +1127,19 @@
     // ------------------------------------------------------------------
     // Molnsynk (Firestore) – valfritt lager ovanpå lokal lagring
     // ------------------------------------------------------------------
+    function hasFirebaseConfig() {
+      const c = FIREBASE_CONFIG;
+      return !!(c && c.apiKey && c.projectId && c.appId && !/^(DIN_|YOUR_|<)/i.test(c.apiKey) && !/^(DIN_|YOUR_|<)/i.test(c.projectId));
+    }
+
     async function connectFirebase() {
+      if (!hasFirebaseConfig()) {
+        console.warn('Ingen Firebase-konfiguration i firebase-config.js – appen kör lokalt.');
+        state.fbStatus = 'off';
+        render();
+        if (state.pendingJoin) showNotice(`Kunde inte hämta gruppen <strong>${esc(state.pendingJoin)}</strong> – molnsynk är inte konfigurerad (firebase-config.js).`, true);
+        return;
+      }
       const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
       const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000));
       try {

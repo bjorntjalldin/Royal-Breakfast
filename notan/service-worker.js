@@ -1,7 +1,7 @@
 // Notan – service worker. App-skalet cachas för offline-start; samma-ursprungs-filer
 // hämtas "stale-while-revalidate" så att uppdateringar når användaren utan att cachen byter namn.
-const CACHE_NAME = 'notan-v1';
-const APP_FILES = ['./', './index.html', './calc.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'notan-v2';
+const APP_FILES = ['./', './index.html', './calc.js', './firebase-config.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
