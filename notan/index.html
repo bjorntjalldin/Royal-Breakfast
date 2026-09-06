@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Notan – dela kostnader</title>
+  <meta name="description" content="Dela gruppens kostnader rättvist. Alla registrerar sina utgifter, Notan räknar ut vem som betalar vem." />
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Notan" />
+  <link rel="apple-touch-icon" href="icon-512.png" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --card: #FFFFFF;
+      --label: #000000;
+      --label2: rgba(60, 60, 67, 0.6);
+      --label3: rgba(60, 60, 67, 0.3);
+      --sep: rgba(60, 60, 67, 0.29);
+      --tint: #007AFF;
+      --tint-soft: rgba(0, 122, 255, 0.12);
+      --green: #34C759;
+      --green-soft: rgba(52, 199, 89, 0.14);
+      --red: #FF3B30;
+      --red-soft: rgba(255, 59, 48, 0.12);
+      --orange: #FF9500;
+      --fill: rgba(120, 120, 128, 0.12);
+      --fill2: rgba(120, 120, 128, 0.2);
+      --bar: rgba(249, 249, 249, 0.92);
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      --radius: 14px;
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --tabbar-h: 50px;
+      --fab-space: 84px;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --card: #1C1C1E;
+        --label: #FFFFFF;
+        --label2: rgba(235, 235, 245, 0.6);
+        --label3: rgba(235, 235, 245, 0.3);
+        --sep: rgba(84, 84, 88, 0.6);
+        --tint: #0A84FF;
+        --tint-soft: rgba(10, 132, 255, 0.2);
+        --green: #30D158;
+        --green-soft: rgba(48, 209, 88, 0.18);
+        --red: #FF453A;
+        --red-soft: rgba(255, 69, 58, 0.18);
+        --orange: #FF9F0A;
+        --fill: rgba(120, 120, 128, 0.24);
+        --fill2: rgba(120, 120, 128, 0.36);
+        --bar: rgba(22, 22, 24, 0.9);
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      }
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; background: var(--bg); }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+      color: var(--label);
+      font-size: 17px;
+      line-height: 1.3;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: none;
+    }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; border: 0; background: none; padding: 0; }
+    button:disabled { opacity: 0.4; cursor: default; }
+    [hidden] { display: none !important; }
+    .num { font-variant-numeric: tabular-nums; }
+
+    #app { max-width: 620px; margin: 0 auto; min-height: 100dvh; position: relative; }
+    .screen { display: none; min-height: 100dvh; }
+    .screen.active { display: block; }
+
+    /* ---- Navigation bar ---- */
+    .navbar {
+      position: sticky; top: 0; z-index: 20;
+      padding-top: var(--safe-t);
+      background: var(--bar);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--sep);
+    }
+    .navbar-inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 48px; padding: 0 8px; }
+    .navbar-inner .center { text-align: center; font-weight: 600; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .navbar-inner .left { justify-self: start; } .navbar-inner .right { justify-self: end; }
+    .nav-btn { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 8px; color: var(--tint); font-size: 17px; border-radius: 10px; }
+    .nav-btn:active { opacity: 0.5; }
+    .nav-btn svg { width: 22px; height: 22px; }
+    .nav-btn.icon { width: 44px; justify-content: center; padding: 0; }
+    .large-title { padding: 6px 16px 10px; font-size: 34px; font-weight: 700; letter-spacing: 0.37px; line-height: 1.2; }
+    .large-title small { display: block; font-size: 15px; font-weight: 400; color: var(--label2); letter-spacing: 0; margin-top: 2px; }
+
+    .sync {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--label2);
+      padding: 4px 10px; border-radius: 999px; background: var(--fill); min-height: 26px;
+    }
+    .sync::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--label3); }
+    .sync.on::before { background: var(--green); }
+    .sync.pending::before { background: var(--orange); }
+
+    /* ---- Content ---- */
+    main { padding: 8px 0 calc(var(--tabbar-h) + var(--safe-b) + 24px); }
+    main.with-fab { padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + var(--fab-space) + 16px); }
+    .lead { color: var(--label2); font-size: 15px; padding: 0 16px; margin: 0 0 20px; }
+    .section-h {
+      margin: 0; padding: 22px 32px 7px; font-size: 13px; font-weight: 400; text-transform: uppercase; letter-spacing: -0.08px; color: var(--label2);
+      display: flex; justify-content: space-between; align-items: baseline;
+    }
+    .section-h:first-child { padding-top: 8px; }
+    .section-h .action { text-transform: none; color: var(--tint); font-size: 15px; letter-spacing: 0; }
+    .footnote { padding: 6px 32px 0; font-size: 13px; color: var(--label2); }
+
+    .list { background: var(--card); border-radius: var(--radius); margin: 0 16px; overflow: hidden; }
+    .row {
+      display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 16px; position: relative; width: 100%; text-align: left; color: inherit;
+    }
+    .row + .row::before, .row + .row-sep::before { content: ''; position: absolute; left: 16px; right: 0; top: 0; height: 0.5px; background: var(--sep); }
+    .row.inset-av + .row::before { left: 64px; }
+    button.row:active, .row.tappable:active { background: var(--fill); }
+    .row .body { flex: 1; min-width: 0; }
+    .row .title { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row .sub { font-size: 13px; color: var(--label2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row .trail { text-align: right; flex-shrink: 0; }
+    .row .trail .title { font-weight: 600; }
+    .row .title.wrap, .row .sub.wrap { white-space: normal; }
+    .chevron { width: 8px; height: 13px; color: var(--label3); flex-shrink: 0; }
+    .row.center { justify-content: center; color: var(--tint); font-weight: 400; }
+    .row.danger { color: var(--red); }
+    .empty { padding: 36px 24px; text-align: center; color: var(--label2); font-size: 15px; }
+    .empty .big { font-size: 44px; margin-bottom: 8px; }
+    .empty strong { display: block; color: var(--label); font-size: 17px; margin-bottom: 4px; }
+
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; text-transform: uppercase; background: var(--label3);
+    }
+    .avatar.sm { width: 28px; height: 28px; font-size: 11px; }
+    .avatar.settle { background: var(--fill2); color: var(--label); font-size: 16px; }
+    .pos { color: var(--green); } .neg { color: var(--red); } .zero { color: var(--label2); }
+
+    /* Hero card */
+    .hero { margin: 0 16px 8px; padding: 20px 18px; border-radius: 18px; background: var(--card); }
+    .hero .k { font-size: 13px; color: var(--label2); text-transform: uppercase; letter-spacing: -0.08px; }
+    .hero .v { font-size: 34px; font-weight: 700; letter-spacing: -0.5px; margin-top: 2px; }
+    .hero .s { font-size: 15px; color: var(--label2); margin-top: 4px; }
+    .hero.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hero.grid .v { font-size: 24px; }
+
+    .bar-track { height: 5px; border-radius: 3px; background: var(--fill); margin-top: 7px; position: relative; overflow: hidden; }
+    .bar-fill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+
+    /* Buttons */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 50px; border-radius: 14px;
+      background: var(--tint); color: #fff; font-size: 17px; font-weight: 600; transition: transform 0.08s ease, opacity 0.2s ease;
+    }
+    .btn:active { transform: scale(0.98); opacity: 0.85; }
+    .btn.secondary { background: var(--tint-soft); color: var(--tint); }
+    .btn.plain { background: var(--fill); color: var(--label); }
+    .btn.danger { background: var(--red-soft); color: var(--red); }
+    .btn.sm { min-height: 34px; width: auto; padding: 0 14px; font-size: 15px; border-radius: 10px; }
+    .stack { display: grid; gap: 12px; padding: 0 16px; }
+
+    .fab {
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--tabbar-h) + var(--safe-b) + 18px); z-index: 25;
+      display: inline-flex; align-items: center; gap: 8px; padding: 0 22px 0 18px; height: 52px; border-radius: 999px;
+      background: var(--tint); color: #fff; font-weight: 600; font-size: 17px; box-shadow: 0 8px 24px rgba(0, 122, 255, 0.35);
+      transition: transform 0.12s ease, opacity 0.2s ease;
+    }
+    .fab:active { transform: translateX(-50%) scale(0.96); }
+    .fab svg { width: 22px; height: 22px; }
+
+    /* Tab bar */
+    .tabbar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; margin: 0 auto; max-width: 620px;
+      display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: var(--safe-b); height: calc(var(--tabbar-h) + var(--safe-b));
+      background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+      border-top: 0.5px solid var(--sep);
+    }
+    .tab-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--label2); font-size: 10px; font-weight: 500; }
+    .tab-btn svg { width: 26px; height: 26px; }
+    .tab-btn.active { color: var(--tint); }
+    .tab { display: none; } .tab.active { display: block; }
+
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 14px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px 7px 7px; border-radius: 999px; background: var(--fill); font-size: 15px; font-weight: 500; color: var(--label);
+      border: 1.5px solid transparent; transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .chip .avatar { width: 24px; height: 24px; font-size: 10px; }
+    .chip.on { background: var(--tint-soft); border-color: var(--tint); color: var(--tint); }
+    .chip.solid.on { background: var(--tint); color: #fff; }
+    .chip .x { margin-left: 2px; color: var(--label2); font-size: 18px; line-height: 1; }
+
+    /* Switch */
+    .switch { position: relative; width: 51px; height: 31px; flex-shrink: 0; }
+    .switch input { position: absolute; inset: 0; z-index: 2; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .switch .knob { position: absolute; inset: 0; border-radius: 16px; background: var(--fill2); transition: background 0.2s ease; }
+    .switch .knob::after {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16); transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .switch input:checked + .knob { background: var(--green); }
+    .switch input:checked + .knob::after { transform: translateX(20px); }
+
+    /* Forms (grouped iOS style) */
+    .frow { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 4px 16px; position: relative; }
+    .frow + .frow::before { content: ''; position: absolute; left: 16px; right: 0; top: 0; height: 0.5px; background: var(--sep); }
+    .frow label { flex: 0 0 auto; font-size: 17px; }
+    .frow input, .frow select { flex: 1; min-width: 0; text-align: right; border: 0; background: transparent; font-size: 17px; outline: none; color: var(--label); padding: 8px 0; -webkit-appearance: none; appearance: none; }
+    .frow input::placeholder { color: var(--label3); }
+    .frow input.left { text-align: left; }
+    .frow select { direction: rtl; }
+    .frow select option { direction: ltr; }
+    .amount-wrap { padding: 22px 16px 10px; text-align: center; }
+    .amount-input {
+      width: 100%; border: 0; background: transparent; text-align: center; font-size: 48px; font-weight: 700; letter-spacing: -1px; outline: none; color: var(--label); padding: 0;
+    }
+    .amount-input::placeholder { color: var(--label3); }
+    .amount-cur { font-size: 15px; color: var(--label2); margin-top: 2px; font-weight: 500; }
+    .inline-add { display: flex; gap: 8px; padding: 8px 16px 12px; }
+    .inline-add input { flex: 1; min-width: 0; height: 44px; border-radius: 12px; border: 0; background: var(--fill); padding: 0 14px; font-size: 17px; outline: none; color: var(--label); }
+    .inline-add input::placeholder { color: var(--label3); }
+    .inline-add .btn { width: auto; min-height: 44px; padding: 0 16px; border-radius: 12px; }
+
+    /* Sheets */
+    .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.28s ease; }
+    .backdrop.open { opacity: 1; pointer-events: auto; }
+    .sheet {
+      position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 620px; max-height: 94dvh; overflow-y: auto; z-index: 50;
+      background: var(--bg); border-radius: 22px 22px 0 0; transform: translateY(105%); transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
+      padding-bottom: calc(18px + var(--safe-b)); box-shadow: var(--shadow); -webkit-overflow-scrolling: touch;
+    }
+    @media (prefers-color-scheme: dark) { .sheet { background: #0e0e10; } }
+    .sheet.open { transform: translateY(0); }
+    .sheet .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--label3); margin: 8px auto 0; }
+    .sheet-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 6px 8px 8px; position: sticky; top: 0; background: inherit; z-index: 2; }
+    .sheet-head .t { text-align: center; font-weight: 600; font-size: 17px; }
+    .sheet-head .left { justify-self: start; } .sheet-head .right { justify-self: end; font-weight: 600; }
+    .sheet .list { margin-top: 8px; }
+    .sheet .stack { margin-top: 20px; }
+    .helper { font-size: 13px; color: var(--label2); padding: 6px 32px 0; }
+
+    /* Share */
+    .code-box { margin: 8px 16px 0; padding: 22px; border-radius: 18px; background: var(--card); text-align: center; }
+    .code-box .code { font-size: 38px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .code-box .link { font-size: 13px; color: var(--label2); word-break: break-all; margin-top: 6px; }
+    .qr { display: flex; justify-content: center; margin-top: 14px; }
+    .qr canvas { border-radius: 12px; background: #fff; padding: 10px; width: 200px !important; height: 200px !important; }
+
+    /* Toast */
+    .toast {
+      position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + var(--safe-b) + 90px); transform: translateX(-50%) translateY(20px); z-index: 60;
+      padding: 12px 18px; border-radius: 999px; background: var(--label); color: var(--bg); font-size: 15px; font-weight: 500; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease; max-width: calc(100% - 32px); text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .transfer { display: flex; align-items: center; gap: 10px; }
+    .transfer .arrow { color: var(--label3); font-size: 18px; }
+    .me-tag { font-size: 12px; font-weight: 600; color: var(--tint); background: var(--tint-soft); padding: 2px 7px; border-radius: 6px; margin-left: 6px; vertical-align: middle; }
+    .date-h { padding: 18px 32px 6px; font-size: 13px; color: var(--label2); text-transform: uppercase; letter-spacing: -0.08px; }
+    .date-h:first-child { padding-top: 6px; }
+
+    @media (min-width: 640px) {
+      .large-title { font-size: 38px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sheet, .backdrop, .toast, .btn, .fab { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===================== HEM ===================== -->
+    <section id="homeScreen" class="screen active" aria-label="Grupper">
+      <header class="navbar">
+        <div class="navbar-inner">
+          <div class="left"></div>
+          <div class="center"></div>
+          <div class="right"><span id="homeSync" class="sync" title="Synkstatus">Ansluter…</span></div>
+        </div>
+        <div class="large-title">Notan<small>Dela kostnader i gruppen, utan krångel.</small></div>
+      </header>
+      <main>
+        <div id="homeNotice" class="list" hidden></div>
+        <h2 class="section-h" id="groupsHeader" hidden>Dina grupper</h2>
+        <div class="list" id="groupList"></div>
+        <div id="homeEmpty" class="empty" hidden>
+          <div class="big">🧾</div>
+          <strong>Inga grupper ännu</strong>
+          Skapa en grupp för resan, middagen eller festen – och bjud in de andra med en länk.
+        </div>
+        <div class="stack" style="margin-top:20px;">
+          <button class="btn" id="createGroupBtn" type="button">Skapa ny grupp</button>
+          <button class="btn secondary" id="joinGroupBtn" type="button">Gå med med kod</button>
+        </div>
+        <p class="footnote" style="margin-top:20px;">Utgifterna sparas på din enhet och synkas live mellan alla i gruppen när du är uppkopplad.</p>
+      </main>
+    </section>
+
+    <!-- ===================== GRUPP ===================== -->
+    <section id="groupScreen" class="screen" aria-label="Grupp">
+      <header class="navbar">
+        <div class="navbar-inner">
+          <div class="left">
+            <button class="nav-btn" id="backBtn" type="button" aria-label="Tillbaka till grupper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+              Grupper
+            </button>
+          </div>
+          <div class="center" id="groupTitle">Grupp</div>
+          <div class="right"><span id="groupSync" class="sync" title="Synkstatus">…</span></div>
+        </div>
+      </header>
+
+      <!-- Utgifter -->
+      <main id="tab-expenses" class="tab active with-fab">
+        <div class="hero grid" id="expenseHero"></div>
+        <div id="expenseList"></div>
+      </main>
+
+      <!-- Saldo -->
+      <main id="tab-balance" class="tab">
+        <div id="balanceContent"></div>
+      </main>
+
+      <!-- Grupp -->
+      <main id="tab-group" class="tab">
+        <div id="groupContent"></div>
+      </main>
+
+      <button class="fab" id="addExpenseBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Ny utgift
+      </button>
+
+      <nav class="tabbar" aria-label="Flikar">
+        <button class="tab-btn active" data-tab="expenses" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
+          Utgifter
+        </button>
+        <button class="tab-btn" data-tab="balance" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 21h10M6 7l6-2 6 2"/><path d="M6 7l-3.5 7.5a3.6 3.6 0 0 0 7 0L6 7zM18 7l-3.5 7.5a3.6 3.6 0 0 0 7 0L18 7z"/></svg>
+          Saldo
+        </button>
+        <button class="tab-btn" data-tab="group" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 20h5.5a5 5 0 0 0-3.4-4.7"/></svg>
+          Grupp
+        </button>
+      </nav>
+    </section>
+  </div>
+
+  <!-- ===================== SHEETS ===================== -->
+  <div class="backdrop" id="backdrop"></div>
+
+  <!-- Ny/ändra utgift -->
+  <div class="sheet" id="expenseSheet" role="dialog" aria-modal="true" aria-labelledby="expenseSheetTitle">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <button class="nav-btn left" type="button" data-close>Avbryt</button>
+      <div class="t" id="expenseSheetTitle">Ny utgift</div>
+      <button class="nav-btn right" type="button" id="saveExpenseBtn">Spara</button>
+    </div>
+    <div class="amount-wrap">
+      <input class="amount-input num" id="expAmount" type="text" inputmode="decimal" placeholder="0" autocomplete="off" aria-label="Belopp" />
+      <div class="amount-cur" id="expCurrency">SEK</div>
+    </div>
+    <div class="list">
+      <div class="frow"><label for="expTitle">Vad</label><input id="expTitle" type="text" placeholder="t.ex. Middag, Taxi, Hyrbil" autocomplete="off" /></div>
+      <div class="frow"><label for="expDate">Datum</label><input id="expDate" type="date" /></div>
+    </div>
+    <h2 class="section-h">Betalades av</h2>
+    <div class="list"><div class="chips" id="expPayer"></div></div>
+    <h2 class="section-h">Delas mellan</h2>
+    <div class="list">
+      <div class="frow">
+        <label for="expSplitAll" style="flex:1">Alla i gruppen</label>
+        <span class="switch"><input type="checkbox" id="expSplitAll" checked /><span class="knob"></span></span>
+      </div>
+      <div class="chips" id="expParticipants"></div>
+    </div>
+    <div class="helper" id="expPreview"></div>
+    <div class="stack" id="expDeleteWrap" hidden>
+      <button class="btn danger" type="button" id="deleteExpenseBtn">Ta bort utgift</button>
+    </div>
+  </div>
+
+  <!-- Skapa grupp -->
+  <div class="sheet" id="createSheet" role="dialog" aria-modal="true">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <button class="nav-btn left" type="button" data-close>Avbryt</button>
+      <div class="t">Ny grupp</div>
+      <button class="nav-btn right" type="button" id="createGroupSaveBtn">Skapa</button>
+    </div>
+    <div class="list">
+      <div class="frow"><label for="newGroupName">Namn</label><input id="newGroupName" type="text" placeholder="t.ex. Skidresa 2026" autocomplete="off" /></div>
+      <div class="frow"><label for="newGroupCurrency">Valuta</label><select id="newGroupCurrency"></select></div>
+    </div>
+    <h2 class="section-h">Deltagare</h2>
+    <div class="list">
+      <div class="frow"><label for="newMyName">Du heter</label><input id="newMyName" type="text" placeholder="Ditt namn" autocomplete="given-name" /></div>
+      <div class="chips" id="newMembersChips"></div>
+      <div class="inline-add">
+        <input id="newMemberInput" type="text" placeholder="Lägg till deltagare" autocomplete="off" />
+        <button class="btn secondary" type="button" id="newMemberAddBtn">Lägg till</button>
+      </div>
+    </div>
+    <p class="helper">Du kan alltid lägga till fler senare. De andra kan också gå med själva via länk eller kod.</p>
+  </div>
+
+  <!-- Gå med -->
+  <div class="sheet" id="joinSheet" role="dialog" aria-modal="true">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <button class="nav-btn left" type="button" data-close>Avbryt</button>
+      <div class="t">Gå med i grupp</div>
+      <button class="nav-btn right" type="button" id="joinSaveBtn">Gå med</button>
+    </div>
+    <div class="list">
+      <div class="frow"><label for="joinCode">Kod</label><input id="joinCode" type="text" placeholder="ABC123" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="8" style="font-family:ui-monospace,Menlo,monospace;letter-spacing:3px" /></div>
+    </div>
+    <p class="helper">Koden hittar du under fliken Grupp hos någon som redan är med. Du kan även öppna den delade länken direkt.</p>
+  </div>
+
+  <!-- Vem är du -->
+  <div class="sheet" id="whoSheet" role="dialog" aria-modal="true">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <button class="nav-btn left" type="button" data-close>Hoppa över</button>
+      <div class="t">Vem är du?</div>
+      <div></div>
+    </div>
+    <p class="helper" style="padding-top:0">Välj ditt namn så att dina utgifter registreras på dig.</p>
+    <div class="list" id="whoList"></div>
+    <h2 class="section-h">Inte med i listan?</h2>
+    <div class="list">
+      <div class="inline-add">
+        <input id="whoNewName" type="text" placeholder="Ditt namn" autocomplete="given-name" />
+        <button class="btn" type="button" id="whoAddBtn">Lägg till mig</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dela -->
+  <div class="sheet" id="shareSheet" role="dialog" aria-modal="true">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <div></div>
+      <div class="t">Bjud in</div>
+      <button class="nav-btn right" type="button" data-close>Klar</button>
+    </div>
+    <div class="code-box">
+      <div class="k" style="font-size:13px;color:var(--label2);text-transform:uppercase">Gruppkod</div>
+      <div class="code" id="shareCode">------</div>
+      <div class="link" id="shareLink"></div>
+      <div class="qr" id="shareQr"></div>
+    </div>
+    <div class="stack">
+      <button class="btn" type="button" id="shareNativeBtn">Dela länk…</button>
+      <button class="btn secondary" type="button" id="copyLinkBtn">Kopiera länk</button>
+    </div>
+    <p class="helper" id="shareHint"></p>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="calc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+  <script type="module">
+    const C = window.NotanCalc;
+
+    // ------------------------------------------------------------------
+    // Konfiguration
+    // ------------------------------------------------------------------
+    const LS = { groups: 'notan.groups.v1', me: 'notan.me.v1', order: 'notan.order.v1', pending: 'notan.pending.v1' };
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAfzRQox1YBs7fjkJHZSToIWwTegK3uC4U",
+      authDomain: "royal-breakfast.firebaseapp.com",
+      projectId: "royal-breakfast",
+      appId: "1:1001805199346:web:57d8acd397ceda13aa1d6b"
+    };
+    const FIREBASE_VERSION = '12.10.0';
+    const COLLECTION = 'splitGroups';
+    const CURRENCIES = [['SEK', 'Svenska kronor'], ['NOK', 'Norska kronor'], ['DKK', 'Danska kronor'], ['EUR', 'Euro'], ['USD', 'US-dollar'], ['GBP', 'Brittiska pund']];
+    const COLORS = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#A2845E'];
+    const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+    // ------------------------------------------------------------------
+    // Tillstånd
+    // ------------------------------------------------------------------
+    const state = {
+      view: 'home',
+      gid: null,
+      tab: 'expenses',
+      groups: loadJSON(LS.groups, {}),
+      me: loadJSON(LS.me, {}),
+      order: loadJSON(LS.order, []),
+      pending: loadJSON(LS.pending, { meta: [], upserts: [], deletes: [] }),
+      sheet: null,
+      editingId: null,
+      draft: null,
+      pendingJoin: null,
+      fb: null,
+      fbStatus: 'connecting',
+      unsub: []
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const el = {
+      homeSync: $('homeSync'), homeNotice: $('homeNotice'), groupsHeader: $('groupsHeader'), groupList: $('groupList'), homeEmpty: $('homeEmpty'),
+      groupTitle: $('groupTitle'), groupSync: $('groupSync'), expenseHero: $('expenseHero'), expenseList: $('expenseList'),
+      balanceContent: $('balanceContent'), groupContent: $('groupContent'), addExpenseBtn: $('addExpenseBtn'),
+      backdrop: $('backdrop'), toast: $('toast'),
+      expAmount: $('expAmount'), expCurrency: $('expCurrency'), expTitle: $('expTitle'), expDate: $('expDate'), expPayer: $('expPayer'),
+      expSplitAll: $('expSplitAll'), expParticipants: $('expParticipants'), expPreview: $('expPreview'), expDeleteWrap: $('expDeleteWrap'),
+      expenseSheetTitle: $('expenseSheetTitle'),
+      newGroupName: $('newGroupName'), newGroupCurrency: $('newGroupCurrency'), newMyName: $('newMyName'), newMembersChips: $('newMembersChips'), newMemberInput: $('newMemberInput'),
+      joinCode: $('joinCode'), whoList: $('whoList'), whoNewName: $('whoNewName'),
+      shareCode: $('shareCode'), shareLink: $('shareLink'), shareQr: $('shareQr'), shareHint: $('shareHint'), shareNativeBtn: $('shareNativeBtn')
+    };
+
+    init();
+
+    // ------------------------------------------------------------------
+    // Init & routing
+    // ------------------------------------------------------------------
+    function init() {
+      populateCurrencies();
+      bindEvents();
+      const params = new URLSearchParams(location.search);
+      const joinCode = normalizeCode(params.get('g') || '');
+      history.replaceState({ view: 'home' }, '', location.pathname);
+      if (joinCode) {
+        if (state.groups[joinCode]) openGroup(joinCode);
+        else { state.pendingJoin = joinCode; showNotice(`Hämtar gruppen <strong>${esc(joinCode)}</strong>…`); }
+      }
+      render();
+      connectFirebase();
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    }
+
+    function bindEvents() {
+      $('createGroupBtn').addEventListener('click', openCreateSheet);
+      $('joinGroupBtn').addEventListener('click', () => { el.joinCode.value = ''; openSheet('joinSheet'); setTimeout(() => el.joinCode.focus(), 350); });
+      $('backBtn').addEventListener('click', () => history.back());
+      el.addExpenseBtn.addEventListener('click', () => openExpenseSheet(null));
+      document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => { setTab(b.dataset.tab); window.scrollTo(0, 0); }));
+      el.backdrop.addEventListener('click', () => closeSheet());
+      document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeSheet()));
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.sheet) closeSheet(); });
+      window.addEventListener('popstate', (e) => {
+        if (state.sheet) closeSheet();
+        const s = e.state || { view: 'home' };
+        if (s.view === 'group' && s.gid && state.groups[s.gid]) openGroup(s.gid, { push: false });
+        else goHome({ push: false });
+      });
+
+      // Utgift
+      $('saveExpenseBtn').addEventListener('click', saveExpense);
+      $('deleteExpenseBtn').addEventListener('click', () => {
+        if (!state.editingId) return;
+        if (!confirm('Ta bort den här utgiften?')) return;
+        deleteExpense(state.gid, state.editingId);
+        closeSheet();
+        toast('Utgift borttagen');
+      });
+      el.expAmount.addEventListener('input', updateExpensePreview);
+      el.expSplitAll.addEventListener('change', () => {
+        if (el.expSplitAll.checked) state.draft.participants = new Set(memberIds(currentGroup()));
+        renderExpenseChips();
+      });
+      el.expAmount.addEventListener('keydown', (e) => { if (e.key === 'Enter') el.expTitle.focus(); });
+      el.expTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveExpense(); });
+
+      // Skapa grupp
+      $('createGroupSaveBtn').addEventListener('click', createGroupFromSheet);
+      $('newMemberAddBtn').addEventListener('click', addDraftMember);
+      el.newMemberInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addDraftMember(); } });
+
+      // Gå med
+      $('joinSaveBtn').addEventListener('click', joinFromSheet);
+      el.joinCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinFromSheet(); });
+      el.joinCode.addEventListener('input', () => { el.joinCode.value = normalizeCode(el.joinCode.value); });
+
+      // Vem är du
+      $('whoAddBtn').addEventListener('click', () => {
+        const name = el.whoNewName.value.trim();
+        if (!name) return el.whoNewName.focus();
+        const mid = addMember(state.gid, name);
+        setMe(state.gid, mid);
+        closeSheet();
+        toast(`Välkommen, ${name}!`);
+      });
+      el.whoNewName.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('whoAddBtn').click(); });
+
+      // Dela
+      $('copyLinkBtn').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(shareUrl(state.gid)); toast('Länk kopierad'); }
+        catch { toast('Kunde inte kopiera – markera länken manuellt'); }
+      });
+      el.shareNativeBtn.addEventListener('click', async () => {
+        const g = currentGroup();
+        const data = { title: `Notan – ${g.meta.name}`, text: `Gå med i gruppen "${g.meta.name}" i Notan. Kod: ${state.gid}`, url: shareUrl(state.gid) };
+        try { if (navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(data.url); toast('Länk kopierad'); } }
+        catch (e) { if (e && e.name !== 'AbortError') toast('Kunde inte dela'); }
+      });
+    }
+
+    function goHome({ push = true } = {}) {
+      unsubscribeRemote();
+      state.view = 'home';
+      state.gid = null;
+      if (push) history.pushState({ view: 'home' }, '', location.pathname);
+      render();
+      window.scrollTo(0, 0);
+    }
+
+    function openGroup(gid, { push = true } = {}) {
+      if (!state.groups[gid]) return;
+      state.view = 'group';
+      state.gid = gid;
+      state.tab = 'expenses';
+      touchOrder(gid);
+      if (push) history.pushState({ view: 'group', gid }, '', `?g=${gid}`);
+      render();
+      window.scrollTo(0, 0);
+      if (state.fb) subscribeRemote(gid);
+      if (!state.me[gid] || !state.groups[gid].meta.members[state.me[gid]]) setTimeout(() => openWhoSheet(), 250);
+    }
+
+    function setTab(tab) {
+      state.tab = tab;
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+      document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.id === `tab-${tab}`));
+      el.addExpenseBtn.hidden = tab !== 'expenses';
+    }
+
+    // ------------------------------------------------------------------
+    // Rendering
+    // ------------------------------------------------------------------
+    function render() {
+      $('homeScreen').classList.toggle('active', state.view === 'home');
+      $('groupScreen').classList.toggle('active', state.view === 'group');
+      renderSync();
+      if (state.view === 'home') renderHome();
+      else { renderGroupHeader(); renderExpenses(); renderBalance(); renderGroupTab(); setTab(state.tab); }
+    }
+
+    function renderSync() {
+      const labels = { connecting: ['Ansluter…', ''], on: ['Live', 'on'], off: ['Lokal', ''], pending: ['Synkar…', 'pending'] };
+      const status = state.fbStatus === 'on' && hasPending() ? 'pending' : state.fbStatus;
+      const [text, cls] = labels[status] || labels.off;
+      for (const node of [el.homeSync, el.groupSync]) { node.textContent = text; node.className = `sync ${cls}`; node.title = status === 'on' ? 'Synkas live mellan alla i gruppen' : status === 'off' ? 'Ingen molnanslutning – sparas bara på den här enheten' : ''; }
+    }
+
+    function renderHome() {
+      const ids = orderedGroupIds();
+      el.groupsHeader.hidden = ids.length === 0;
+      el.homeEmpty.hidden = ids.length > 0;
+      el.groupList.innerHTML = ids.map((gid) => {
+        const g = state.groups[gid];
+        const mids = memberIds(g);
+        const b = C.computeBalances(mids, Object.values(g.expenses));
+        const sub = `${mids.length} ${mids.length === 1 ? 'person' : 'personer'} · ${C.formatCents(b.total, g.meta.currency)}`;
+        return `<button class="row tappable" type="button" data-open="${esc(gid)}">
+          <span class="avatar" style="background:${groupColor(gid)}">${esc(initials(g.meta.name))}</span>
+          <span class="body"><div class="title">${esc(g.meta.name)}</div><div class="sub">${esc(sub)}</div></span>
+          ${chevron()}
+        </button>`;
+      }).join('');
+      el.groupList.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openGroup(b.dataset.open)));
+    }
+
+    function renderGroupHeader() {
+      const g = currentGroup();
+      el.groupTitle.textContent = g ? g.meta.name : '';
+    }
+
+    function renderExpenses() {
+      const g = currentGroup(); if (!g) return;
+      const mids = memberIds(g);
+      const me = state.me[state.gid];
+      const b = C.computeBalances(mids, Object.values(g.expenses));
+      const myNet = me && mids.includes(me) ? b.net[me] : null;
+      el.expenseHero.innerHTML = `
+        <div><div class="k">Totalt</div><div class="v num">${esc(C.formatCents(b.total, g.meta.currency))}</div><div class="s">${b.count} ${b.count === 1 ? 'utgift' : 'utgifter'}</div></div>
+        <div><div class="k">${myNet === null ? 'Per person' : 'Du'}</div>
+          ${myNet === null
+            ? `<div class="v num">${esc(C.formatCents(mids.length ? Math.round(b.total / mids.length) : 0, g.meta.currency))}</div><div class="s">i snitt</div>`
+            : `<div class="v num ${netClass(myNet)}">${esc(signed(myNet, g.meta.currency))}</div><div class="s">${myNet > 0 ? 'ska få tillbaka' : myNet < 0 ? 'ska betala' : 'är kvitt'}</div>`}
+        </div>`;
+
+      const list = Object.values(g.expenses).filter((e) => e && e.amount > 0).sort((a, b2) => (b2.date || '').localeCompare(a.date || '') || (b2.createdAt || 0) - (a.createdAt || 0));
+      if (!list.length) {
+        el.expenseList.innerHTML = `<div class="empty"><div class="big">☕️</div><strong>Inga utgifter ännu</strong>Tryck på <em>Ny utgift</em> för att lägga till den första. Alla i gruppen kan registrera sina egna.</div>`;
+        return;
+      }
+      let html = '';
+      let lastDate = null;
+      for (const e of list) {
+        if (e.date !== lastDate) { html += (lastDate === null ? '' : '</div>') + `<div class="date-h">${esc(dateLabel(e.date))}</div><div class="list">`; lastDate = e.date; }
+        const payer = g.meta.members[e.paidBy];
+        const parts = (e.participants || []).filter((id) => g.meta.members[id]);
+        const isSettle = e.type === 'settlement';
+        let sub, trailSub = '';
+        if (isSettle) {
+          const to = g.meta.members[parts[0]];
+          sub = `${payer ? payer.name : '?'} betalade ${to ? to.name : '?'}`;
+        } else {
+          sub = `${payer ? payer.name : '?'} betalade · ${parts.length === mids.length ? 'alla' : parts.length + ' pers'}`;
+          if (me && parts.includes(me)) trailSub = `din andel ${C.formatCents(C.splitEqually(e.amount, parts)[me], g.meta.currency)}`;
+        }
+        html += `<button class="row tappable inset-av" type="button" data-edit="${esc(e.id)}">
+          ${isSettle ? `<span class="avatar settle">↔</span>` : avatar(payer, e.paidBy)}
+          <span class="body"><div class="title">${esc(e.title || (isSettle ? 'Återbetalning' : 'Utgift'))}</div><div class="sub">${esc(sub)}</div></span>
+          <span class="trail"><div class="title num">${esc(C.formatCents(e.amount, g.meta.currency))}</div>${trailSub ? `<div class="sub num">${esc(trailSub)}</div>` : ''}</span>
+        </button>`;
+      }
+      html += '</div>';
+      el.expenseList.innerHTML = html;
+      el.expenseList.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openExpenseSheet(b.dataset.edit)));
+    }
+
+    function renderBalance() {
+      const g = currentGroup(); if (!g) return;
+      const mids = memberIds(g);
+      const cur = g.meta.currency;
+      const me = state.me[state.gid];
+      const b = C.computeBalances(mids, Object.values(g.expenses));
+      const plan = C.settle(b.net);
+      const maxAbs = Math.max(1, ...mids.map((id) => Math.abs(b.net[id])));
+
+      let html = '';
+      if (me && mids.includes(me)) {
+        const n = b.net[me];
+        html += `<div class="hero"><div class="k">Din ställning</div>
+          <div class="v num ${netClass(n)}">${esc(signed(n, cur))}</div>
+          <div class="s">${n > 0 ? 'Du har lagt ut mer än din andel och ska få tillbaka pengar.' : n < 0 ? 'Du har betalat mindre än din andel och ska betala.' : 'Du är kvitt med gruppen.'}</div></div>`;
+      }
+
+      html += `<h2 class="section-h"><span>Vem betalar vem</span><span>${plan.length} ${plan.length === 1 ? 'överföring' : 'överföringar'}</span></h2>`;
+      if (!plan.length) {
+        html += `<div class="list"><div class="empty">${b.count ? '<div class="big">🎉</div><strong>Allt är utjämnat</strong>Ingen är skyldig någon något.' : '<div class="big">⚖️</div><strong>Inget att jämna ut</strong>Lägg till utgifter så räknar Notan ut vem som ska betala vem.'}</div></div>`;
+      } else {
+        html += '<div class="list">' + plan.map((t) => {
+          const from = g.meta.members[t.from], to = g.meta.members[t.to];
+          const involvesMe = me === t.from || me === t.to;
+          return `<div class="row inset-av">
+            <span class="transfer">${avatar(from, t.from, 'sm')}<span class="arrow">→</span>${avatar(to, t.to, 'sm')}</span>
+            <span class="body"><div class="title wrap"><strong>${esc(nameOf(from))}</strong> betalar <strong>${esc(nameOf(to))}</strong>${involvesMe ? '<span class="me-tag">du</span>' : ''}</div><div class="sub num">${esc(C.formatCents(t.amount, cur))}</div></span>
+            <button class="btn secondary sm" type="button" data-settle="${esc(t.from)}|${esc(t.to)}|${t.amount}">Betald</button>
+          </div>`;
+        }).join('') + '</div>';
+        html += `<p class="footnote">Förslaget minimerar antalet överföringar. Tryck på <em>Betald</em> när pengarna är överförda så uppdateras saldot.</p>`;
+      }
+
+      html += `<h2 class="section-h">Saldo per person</h2><div class="list">` + mids.map((id) => {
+        const m = g.meta.members[id];
+        const n = b.net[id];
+        const pct = Math.round((Math.abs(n) / maxAbs) * 100);
+        return `<div class="row inset-av">
+          ${avatar(m, id)}
+          <span class="body">
+            <div class="title">${esc(m.name)}${id === me ? '<span class="me-tag">du</span>' : ''}</div>
+            <div class="sub num wrap">betalat ${esc(C.formatCents(b.paid[id], cur))} · andel ${esc(C.formatCents(b.share[id], cur))}</div>
+            <div class="bar-track"><span class="bar-fill" style="${n >= 0 ? 'left:50%' : 'right:50%'};width:${pct / 2}%;background:${n > 0 ? 'var(--green)' : n < 0 ? 'var(--red)' : 'transparent'}"></span></div>
+          </span>
+          <span class="trail"><div class="title num ${netClass(n)}">${esc(signed(n, cur))}</div></span>
+        </div>`;
+      }).join('') + '</div>';
+
+      html += `<div class="hero grid" style="margin-top:22px">
+        <div><div class="k">Utgifter</div><div class="v num">${esc(C.formatCents(b.total, cur))}</div><div class="s">${b.count} st</div></div>
+        <div><div class="k">Återbetalat</div><div class="v num">${esc(C.formatCents(b.settled, cur))}</div><div class="s">markerat som betalt</div></div>
+      </div>`;
+
+      el.balanceContent.innerHTML = html;
+      el.balanceContent.querySelectorAll('[data-settle]').forEach((btn) => btn.addEventListener('click', () => {
+        const [from, to, amount] = btn.dataset.settle.split('|');
+        const fn = nameOf(g.meta.members[from]), tn = nameOf(g.meta.members[to]);
+        if (!confirm(`Markera att ${fn} har betalat ${C.formatCents(+amount, cur)} till ${tn}?`)) return;
+        recordSettlement(state.gid, from, to, +amount);
+        toast('Återbetalning registrerad');
+      }));
+    }
+
+    function renderGroupTab() {
+      const g = currentGroup(); if (!g) return;
+      const mids = memberIds(g);
+      const me = state.me[state.gid];
+      const used = usedMemberIds(g);
+      let html = `
+        <h2 class="section-h">Grupp</h2>
+        <div class="list">
+          <div class="frow"><label for="groupNameInput">Namn</label><input id="groupNameInput" type="text" value="${esc(g.meta.name)}" autocomplete="off" /></div>
+          <div class="frow"><label for="groupCurrencyInput">Valuta</label><select id="groupCurrencyInput">${CURRENCIES.map(([c, n]) => `<option value="${c}" ${c === g.meta.currency ? 'selected' : ''}>${c} – ${n}</option>`).join('')}</select></div>
+          <div class="frow"><label style="flex:1">Synkning</label><span style="color:var(--label2);font-size:15px">${state.fbStatus === 'on' ? 'Live via molnet' : state.fbStatus === 'connecting' ? 'Ansluter…' : 'Endast den här enheten'}</span></div>
+        </div>
+        <h2 class="section-h"><span>Deltagare</span><span>${mids.length}</span></h2>
+        <div class="list">` + mids.map((id) => {
+          const m = g.meta.members[id];
+          const isMe = id === me;
+          return `<div class="row inset-av">${avatar(m, id)}
+            <span class="body"><div class="title">${esc(m.name)}${isMe ? '<span class="me-tag">du</span>' : ''}</div><div class="sub">${used.has(id) ? 'Har utgifter' : 'Inga utgifter ännu'}</div></span>
+            ${isMe ? '' : `<button class="btn plain sm" type="button" data-me="${esc(id)}">Det är jag</button>`}
+            ${used.has(id) ? '' : `<button class="btn danger sm" type="button" data-remove="${esc(id)}" aria-label="Ta bort ${esc(m.name)}">Ta bort</button>`}
+          </div>`;
+        }).join('') + `
+          <div class="inline-add"><input id="addMemberInput" type="text" placeholder="Lägg till deltagare" autocomplete="off" /><button class="btn secondary" type="button" id="addMemberBtn">Lägg till</button></div>
+        </div>
+        <p class="footnote">Deltagare med registrerade utgifter kan inte tas bort.</p>
+        <h2 class="section-h">Bjud in</h2>
+        <div class="list">
+          <button class="row tappable" type="button" id="shareBtn"><span class="avatar" style="background:var(--tint)">⇪</span><span class="body"><div class="title">Dela länk eller kod</div><div class="sub">Kod: <span style="font-family:ui-monospace,Menlo,monospace;letter-spacing:2px">${esc(state.gid)}</span></div></span>${chevron()}</button>
+        </div>
+        <h2 class="section-h">Hantera</h2>
+        <div class="list">
+          <button class="row center" type="button" id="exportBtn">Exportera som CSV</button>
+          <button class="row center" type="button" id="leaveBtn">Ta bort från min enhet</button>
+          <button class="row center danger" type="button" id="deleteGroupBtn">Radera gruppen för alla</button>
+        </div>`;
+      el.groupContent.innerHTML = html;
+
+      $('groupNameInput').addEventListener('change', (e) => { const v = e.target.value.trim(); if (v) updateMeta(state.gid, { name: v }); else e.target.value = g.meta.name; });
+      $('groupCurrencyInput').addEventListener('change', (e) => updateMeta(state.gid, { currency: e.target.value }));
+      $('addMemberBtn').addEventListener('click', () => { const i = $('addMemberInput'); const v = i.value.trim(); if (!v) return i.focus(); addMember(state.gid, v); toast(`${v} tillagd`); });
+      $('addMemberInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('addMemberBtn').click(); });
+      el.groupContent.querySelectorAll('[data-me]').forEach((b) => b.addEventListener('click', () => { setMe(state.gid, b.dataset.me); toast(`Du är nu ${nameOf(g.meta.members[b.dataset.me])}`); }));
+      el.groupContent.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', () => {
+        const m = g.meta.members[b.dataset.remove];
+        if (!confirm(`Ta bort ${nameOf(m)} från gruppen?`)) return;
+        removeMember(state.gid, b.dataset.remove);
+      }));
+      $('shareBtn').addEventListener('click', openShareSheet);
+      $('exportBtn').addEventListener('click', exportCsv);
+      $('leaveBtn').addEventListener('click', () => {
+        if (!confirm('Ta bort gruppen från den här enheten? Gruppen finns kvar för de andra och du kan gå med igen med koden.')) return;
+        removeLocalGroup(state.gid);
+        goHome();
+        toast('Gruppen togs bort från enheten');
+      });
+      $('deleteGroupBtn').addEventListener('click', () => {
+        if (!confirm('Radera gruppen och alla utgifter för ALLA deltagare? Detta kan inte ångras.')) return;
+        deleteGroupEverywhere(state.gid);
+        goHome();
+        toast('Gruppen raderad');
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // Sheets
+    // ------------------------------------------------------------------
+    function openSheet(id) {
+      closeSheet(true);
+      state.sheet = id;
+      $(id).classList.add('open');
+      el.backdrop.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeSheet(silent) {
+      if (state.sheet) $(state.sheet).classList.remove('open');
+      state.sheet = null;
+      if (!silent) { el.backdrop.classList.remove('open'); document.body.style.overflow = ''; render(); }
+    }
+
+    function openExpenseSheet(expenseId) {
+      const g = currentGroup(); if (!g) return;
+      const mids = memberIds(g);
+      if (!mids.length) { toast('Lägg till deltagare först'); setTab('group'); return; }
+      const me = state.me[state.gid];
+      const existing = expenseId ? g.expenses[expenseId] : null;
+      state.editingId = existing ? expenseId : null;
+      const parts = existing ? existing.participants.filter((id) => g.meta.members[id]) : mids;
+      state.draft = {
+        paidBy: existing && g.meta.members[existing.paidBy] ? existing.paidBy : (me && g.meta.members[me] ? me : mids[0]),
+        participants: new Set(parts.length ? parts : mids),
+        type: existing ? existing.type || 'expense' : 'expense'
+      };
+      el.expenseSheetTitle.textContent = existing ? (existing.type === 'settlement' ? 'Återbetalning' : 'Ändra utgift') : 'Ny utgift';
+      el.expAmount.value = existing ? String(existing.amount / 100).replace('.', ',') : '';
+      el.expTitle.value = existing ? existing.title || '' : '';
+      el.expDate.value = existing ? existing.date : todayISO();
+      el.expCurrency.textContent = g.meta.currency;
+      el.expSplitAll.checked = state.draft.participants.size === mids.length;
+      el.expDeleteWrap.hidden = !existing;
+      renderExpenseChips();
+      openSheet('expenseSheet');
+      if (!existing) setTimeout(() => el.expAmount.focus(), 350);
+    }
+
+    function renderExpenseChips() {
+      const g = currentGroup(); if (!g || !state.draft) return;
+      const mids = memberIds(g);
+      el.expPayer.innerHTML = mids.map((id) => chip(g.meta.members[id], id, state.draft.paidBy === id, 'payer', true)).join('');
+      el.expPayer.querySelectorAll('[data-payer]').forEach((c) => c.addEventListener('click', () => { state.draft.paidBy = c.dataset.payer; renderExpenseChips(); }));
+      el.expParticipants.hidden = el.expSplitAll.checked;
+      el.expParticipants.innerHTML = mids.map((id) => chip(g.meta.members[id], id, state.draft.participants.has(id), 'part')).join('');
+      el.expParticipants.querySelectorAll('[data-part]').forEach((c) => c.addEventListener('click', () => {
+        const id = c.dataset.part;
+        if (state.draft.participants.has(id)) { if (state.draft.participants.size > 1) state.draft.participants.delete(id); }
+        else state.draft.participants.add(id);
+        el.expSplitAll.checked = state.draft.participants.size === mids.length;
+        renderExpenseChips();
+      }));
+      updateExpensePreview();
+    }
+
+    function updateExpensePreview() {
+      const g = currentGroup(); if (!g || !state.draft) return;
+      const cents = C.parseAmount(el.expAmount.value);
+      const n = state.draft.participants.size;
+      if (cents === null || cents <= 0) { el.expPreview.textContent = n === 1 ? 'Delas inte – hela beloppet läggs på en person.' : `Delas lika mellan ${n} personer.`; return; }
+      const shares = C.splitEqually(cents, [...state.draft.participants]);
+      const first = Object.values(shares)[0];
+      el.expPreview.textContent = n === 1 ? `Hela beloppet ${C.formatCents(cents, g.meta.currency)} läggs på en person.` : `Delas lika mellan ${n} personer · ${C.formatCents(first, g.meta.currency)} per person`;
+    }
+
+    function saveExpense() {
+      const g = currentGroup(); if (!g || !state.draft) return;
+      const cents = C.parseAmount(el.expAmount.value);
+      if (cents === null || cents <= 0) { toast('Ange ett belopp'); el.expAmount.focus(); return; }
+      if (!state.draft.participants.size) { toast('Välj minst en person'); return; }
+      const existing = state.editingId ? g.expenses[state.editingId] : null;
+      const expense = {
+        id: state.editingId || uid(12),
+        type: state.draft.type,
+        title: el.expTitle.value.trim() || (state.draft.type === 'settlement' ? 'Återbetalning' : 'Utgift'),
+        amount: cents,
+        paidBy: state.draft.paidBy,
+        participants: memberIds(g).filter((id) => state.draft.participants.has(id)),
+        date: el.expDate.value || todayISO(),
+        createdAt: existing ? existing.createdAt : Date.now(),
+        createdBy: existing ? existing.createdBy || null : state.me[state.gid] || null,
+        updatedAt: Date.now()
+      };
+      upsertExpense(state.gid, expense);
+      closeSheet();
+      toast(existing ? 'Utgift uppdaterad' : 'Utgift sparad');
+    }
+
+    let draftMembers = [];
+    function openCreateSheet() {
+      draftMembers = [];
+      el.newGroupName.value = '';
+      el.newGroupCurrency.value = 'SEK';
+      el.newMyName.value = '';
+      el.newMemberInput.value = '';
+      renderDraftMembers();
+      openSheet('createSheet');
+      setTimeout(() => el.newGroupName.focus(), 350);
+    }
+    function addDraftMember() {
+      const v = el.newMemberInput.value.trim();
+      if (!v) return;
+      draftMembers.push(v);
+      el.newMemberInput.value = '';
+      renderDraftMembers();
+      el.newMemberInput.focus();
+    }
+    function renderDraftMembers() {
+      el.newMembersChips.hidden = draftMembers.length === 0;
+      el.newMembersChips.innerHTML = draftMembers.map((n, i) => `<button class="chip" type="button" data-i="${i}"><span class="avatar" style="background:${COLORS[(i + 1) % COLORS.length]}">${esc(initials(n))}</span>${esc(n)}<span class="x">×</span></button>`).join('');
+      el.newMembersChips.querySelectorAll('[data-i]').forEach((c) => c.addEventListener('click', () => { draftMembers.splice(+c.dataset.i, 1); renderDraftMembers(); }));
+    }
+    function createGroupFromSheet() {
+      const name = el.newGroupName.value.trim();
+      if (!name) { toast('Ge gruppen ett namn'); el.newGroupName.focus(); return; }
+      const myName = el.newMyName.value.trim();
+      const pendingInput = el.newMemberInput.value.trim();
+      const names = [...draftMembers, ...(pendingInput ? [pendingInput] : [])];
+      const gid = createGroup(name, el.newGroupCurrency.value, myName ? [myName, ...names] : names, myName ? 0 : null);
+      closeSheet();
+      openGroup(gid);
+      toast('Gruppen skapad – bjud in de andra!');
+    }
+
+    async function joinFromSheet() {
+      const code = normalizeCode(el.joinCode.value);
+      if (code.length < 4) { toast('Ange gruppkoden'); el.joinCode.focus(); return; }
+      closeSheet();
+      if (state.groups[code]) { openGroup(code); return; }
+      state.pendingJoin = code;
+      showNotice(`Hämtar gruppen <strong>${esc(code)}</strong>…`);
+      await handlePendingJoin();
+    }
+
+    function openWhoSheet() {
+      const g = currentGroup(); if (!g) return;
+      const mids = memberIds(g);
+      el.whoNewName.value = '';
+      el.whoList.hidden = mids.length === 0;
+      el.whoList.innerHTML = mids.map((id) => `<button class="row tappable inset-av" type="button" data-who="${esc(id)}">${avatar(g.meta.members[id], id)}<span class="body"><div class="title">${esc(g.meta.members[id].name)}</div></span>${chevron()}</button>`).join('');
+      el.whoList.querySelectorAll('[data-who]').forEach((b) => b.addEventListener('click', () => { setMe(state.gid, b.dataset.who); closeSheet(); toast(`Hej ${nameOf(g.meta.members[b.dataset.who])}!`); }));
+      openSheet('whoSheet');
+    }
+
+    function openShareSheet() {
+      const url = shareUrl(state.gid);
+      el.shareCode.textContent = state.gid;
+      el.shareLink.textContent = url;
+      el.shareNativeBtn.hidden = !navigator.share;
+      el.shareHint.textContent = state.fbStatus === 'on'
+        ? 'Alla som öppnar länken eller anger koden ser samma utgifter och saldo, live.'
+        : 'Obs: ingen molnanslutning just nu. Gruppen synkas till de andra först när enheten är uppkopplad.';
+      el.shareQr.innerHTML = '';
+      if (window.QRCode && window.QRCode.toCanvas) {
+        const canvas = document.createElement('canvas');
+        el.shareQr.appendChild(canvas);
+        window.QRCode.toCanvas(canvas, url, { width: 200, margin: 1, errorCorrectionLevel: 'M' }, (err) => { if (err) el.shareQr.innerHTML = ''; });
+      }
+      openSheet('shareSheet');
+    }
+
+    // ------------------------------------------------------------------
+    // Datamodell (lokalt först, molnet sedan)
+    // ------------------------------------------------------------------
+    function createGroup(name, currency, memberNames, myIndex) {
+      const gid = uid(6);
+      const now = Date.now();
+      const members = {};
+      let myId = null;
+      memberNames.forEach((n, i) => {
+        const mid = uid(10);
+        members[mid] = { name: n, color: COLORS[i % COLORS.length], order: i, createdAt: now + i };
+        if (i === myIndex) myId = mid;
+      });
+      state.groups[gid] = { meta: { id: gid, name, currency: currency || 'SEK', members, createdAt: now, updatedAt: now }, expenses: {} };
+      if (myId) state.me[gid] = myId;
+      touchOrder(gid);
+      persist();
+      remoteSaveMeta(gid);
+      return gid;
+    }
+
+    function updateMeta(gid, patch) {
+      const g = state.groups[gid]; if (!g) return;
+      Object.assign(g.meta, patch, { updatedAt: Date.now() });
+      persist(); render();
+      remoteSaveMeta(gid, patch);
+    }
+
+    function addMember(gid, name) {
+      const g = state.groups[gid];
+      const mid = uid(10);
+      const order = memberIds(g).length;
+      g.meta.members[mid] = { name, color: COLORS[order % COLORS.length], order, createdAt: Date.now() };
+      g.meta.updatedAt = Date.now();
+      persist(); render();
+      remoteSaveMeta(gid, { members: { [mid]: g.meta.members[mid] } });
+      return mid;
+    }
+
+    function removeMember(gid, mid) {
+      const g = state.groups[gid];
+      if (usedMemberIds(g).has(mid)) { toast('Personen har utgifter och kan inte tas bort'); return; }
+      delete g.meta.members[mid];
+      if (state.me[gid] === mid) delete state.me[gid];
+      g.meta.updatedAt = Date.now();
+      persist(); render();
+      remoteRemoveMember(gid, mid);
+    }
+
+    function setMe(gid, mid) { state.me[gid] = mid; persist(); render(); }
+
+    function upsertExpense(gid, expense) {
+      const g = state.groups[gid]; if (!g) return;
+      g.expenses[expense.id] = expense;
+      persist(); render();
+      remoteUpsertExpense(gid, expense);
+    }
+
+    function deleteExpense(gid, eid) {
+      const g = state.groups[gid]; if (!g) return;
+      delete g.expenses[eid];
+      persist(); render();
+      remoteDeleteExpense(gid, eid);
+    }
+
+    function recordSettlement(gid, from, to, amount) {
+      upsertExpense(gid, { id: uid(12), type: 'settlement', title: 'Återbetalning', amount, paidBy: from, participants: [to], date: todayISO(), createdAt: Date.now(), createdBy: state.me[gid] || null, updatedAt: Date.now() });
+    }
+
+    function removeLocalGroup(gid) {
+      unsubscribeRemote();
+      delete state.groups[gid];
+      delete state.me[gid];
+      state.order = state.order.filter((x) => x !== gid);
+      persist();
+    }
+
+    function deleteGroupEverywhere(gid) {
+      const expenseIds = Object.keys(state.groups[gid] ? state.groups[gid].expenses : {});
+      removeLocalGroup(gid);
+      remoteDeleteGroup(gid, expenseIds);
+    }
+
+    function exportCsv() {
+      const g = currentGroup(); if (!g) return;
+      const rows = [['Datum', 'Beskrivning', 'Typ', 'Belopp', 'Valuta', 'Betalad av', 'Delas mellan']];
+      for (const e of Object.values(g.expenses).sort((a, b) => (a.date || '').localeCompare(b.date || ''))) {
+        rows.push([e.date, e.title, e.type === 'settlement' ? 'Återbetalning' : 'Utgift', (e.amount / 100).toFixed(2).replace('.', ','), g.meta.currency, nameOf(g.meta.members[e.paidBy]), (e.participants || []).map((id) => nameOf(g.meta.members[id])).join('; ')]);
+      }
+      const csv = '\uFEFF' + rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${g.meta.name.replace(/[^\wåäöÅÄÖ -]+/g, '_')}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+
+    // ------------------------------------------------------------------
+    // Molnsynk (Firestore) – valfritt lager ovanpå lokal lagring
+    // ------------------------------------------------------------------
+    async function connectFirebase() {
+      const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
+      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000));
+      try {
+        const [appMod, fsMod] = await Promise.race([Promise.all([import(`${base}/firebase-app.js`), import(`${base}/firebase-firestore.js`)]), timeout]);
+        const app = appMod.getApps().length ? appMod.getApps()[0] : appMod.initializeApp(FIREBASE_CONFIG);
+        let db;
+        try { db = fsMod.initializeFirestore(app, { localCache: fsMod.persistentLocalCache({ tabManager: fsMod.persistentMultipleTabManager() }) }); }
+        catch { db = fsMod.getFirestore(app); }
+        state.fb = { db, ...fsMod };
+        state.fbStatus = 'on';
+        render();
+        await flushPending();
+        if (state.gid) subscribeRemote(state.gid);
+        await handlePendingJoin();
+      } catch (err) {
+        console.warn('Molnsynk ej tillgänglig:', err);
+        state.fbStatus = 'off';
+        render();
+        if (state.pendingJoin) showNotice(`Kunde inte hämta gruppen <strong>${esc(state.pendingJoin)}</strong> – ingen molnanslutning. Kontrollera nätet och ladda om sidan.`, true);
+      }
+    }
+
+    const groupRef = (gid) => state.fb.doc(state.fb.db, COLLECTION, gid);
+    const expenseRef = (gid, eid) => state.fb.doc(state.fb.db, COLLECTION, gid, 'expenses', eid);
+
+    function subscribeRemote(gid) {
+      unsubscribeRemote();
+      if (!state.fb) return;
+      const fb = state.fb;
+      state.unsub.push(fb.onSnapshot(groupRef(gid), (snap) => {
+        if (!snap.exists() || state.gid !== gid) return;
+        const data = snap.data();
+        const g = state.groups[gid]; if (!g) return;
+        g.meta = { id: gid, name: data.name || g.meta.name, currency: data.currency || g.meta.currency, members: data.members || {}, createdAt: data.createdAt || g.meta.createdAt, updatedAt: data.updatedAt || Date.now() };
+        if (state.me[gid] && !g.meta.members[state.me[gid]]) delete state.me[gid];
+        persist(); if (!state.sheet) render(); else renderSync();
+      }, (err) => onRemoteError(err)));
+      state.unsub.push(fb.onSnapshot(fb.collection(fb.db, COLLECTION, gid, 'expenses'), (snap) => {
+        if (state.gid !== gid) return;
+        const g = state.groups[gid]; if (!g) return;
+        const expenses = {};
+        snap.forEach((d) => { expenses[d.id] = normalizeExpense(d.id, d.data()); });
+        // Behåll lokalt skapade utgifter som ännu inte hunnit upp i molnet
+        for (const p of state.pending.upserts) if (p.gid === gid && g.expenses[p.eid] && !expenses[p.eid]) expenses[p.eid] = g.expenses[p.eid];
+        g.expenses = expenses;
+        persist(); if (!state.sheet) render(); else renderSync();
+      }, (err) => onRemoteError(err)));
+    }
+
+    function unsubscribeRemote() { state.unsub.forEach((u) => { try { u(); } catch {} }); state.unsub = []; }
+
+    function onRemoteError(err) {
+      console.warn('Firestore:', err);
+      if (err && err.code === 'permission-denied') { state.fbStatus = 'off'; renderSync(); toast('Molnsynk nekad – kontrollera Firestore-reglerna'); }
+    }
+
+    function normalizeExpense(id, d) {
+      return { id, type: d.type === 'settlement' ? 'settlement' : 'expense', title: d.title || '', amount: Number(d.amount) || 0, paidBy: d.paidBy || '', participants: Array.isArray(d.participants) ? d.participants : [], date: d.date || todayISO(), createdAt: Number(d.createdAt) || 0, createdBy: d.createdBy || null, updatedAt: Number(d.updatedAt) || 0 };
+    }
+
+    async function remoteSaveMeta(gid, patch) {
+      const g = state.groups[gid]; if (!g) return;
+      if (!state.fb) { queuePending('meta', { gid }); return; }
+      try {
+        const payload = patch ? { ...patch, updatedAt: Date.now() } : { ...g.meta };
+        await state.fb.setDoc(groupRef(gid), payload, { merge: true });
+      } catch (err) { onRemoteError(err); queuePending('meta', { gid }); }
+    }
+    async function remoteRemoveMember(gid, mid) {
+      if (!state.fb) { queuePending('meta', { gid }); return; }
+      try { await state.fb.updateDoc(groupRef(gid), { [`members.${mid}`]: state.fb.deleteField(), updatedAt: Date.now() }); }
+      catch (err) { onRemoteError(err); }
+    }
+    async function remoteUpsertExpense(gid, expense) {
+      if (!state.fb) { queuePending('upserts', { gid, eid: expense.id }); return; }
+      try { await state.fb.setDoc(expenseRef(gid, expense.id), expense); }
+      catch (err) { onRemoteError(err); queuePending('upserts', { gid, eid: expense.id }); }
+    }
+    async function remoteDeleteExpense(gid, eid) {
+      if (!state.fb) { queuePending('deletes', { gid, eid }); return; }
+      try { await state.fb.deleteDoc(expenseRef(gid, eid)); }
+      catch (err) { onRemoteError(err); queuePending('deletes', { gid, eid }); }
+    }
+    async function remoteDeleteGroup(gid, expenseIds) {
+      if (!state.fb) return;
+      try {
+        const batch = state.fb.writeBatch(state.fb.db);
+        const snap = await state.fb.getDocs(state.fb.collection(state.fb.db, COLLECTION, gid, 'expenses'));
+        snap.forEach((d) => batch.delete(d.ref));
+        expenseIds.forEach((eid) => batch.delete(expenseRef(gid, eid)));
+        batch.delete(groupRef(gid));
+        await batch.commit();
+      } catch (err) { onRemoteError(err); }
+    }
+
+    function queuePending(kind, item) {
+      const list = state.pending[kind];
+      if (!list.some((x) => x.gid === item.gid && x.eid === item.eid)) list.push(item);
+      if (kind === 'upserts') state.pending.deletes = state.pending.deletes.filter((x) => !(x.gid === item.gid && x.eid === item.eid));
+      if (kind === 'deletes') state.pending.upserts = state.pending.upserts.filter((x) => !(x.gid === item.gid && x.eid === item.eid));
+      persist(); renderSync();
+    }
+    function hasPending() { return state.pending.meta.length + state.pending.upserts.length + state.pending.deletes.length > 0; }
+
+    async function flushPending() {
+      if (!state.fb || !hasPending()) return;
+      const { meta, upserts, deletes } = state.pending;
+      state.pending = { meta: [], upserts: [], deletes: [] };
+      for (const p of meta) if (state.groups[p.gid]) await remoteSaveMeta(p.gid);
+      for (const p of upserts) { const e = state.groups[p.gid] && state.groups[p.gid].expenses[p.eid]; if (e) await remoteUpsertExpense(p.gid, e); }
+      for (const p of deletes) await remoteDeleteExpense(p.gid, p.eid);
+      persist(); renderSync();
+    }
+
+    async function handlePendingJoin() {
+      const code = state.pendingJoin;
+      if (!code) return;
+      if (state.groups[code]) { state.pendingJoin = null; hideNotice(); openGroup(code); return; }
+      if (!state.fb) return; // väntar på anslutning
+      try {
+        const snap = await state.fb.getDoc(groupRef(code));
+        state.pendingJoin = null;
+        if (!snap.exists()) { showNotice(`Ingen grupp med koden <strong>${esc(code)}</strong> hittades. Kontrollera koden och försök igen.`, true); return; }
+        const data = snap.data();
+        state.groups[code] = { meta: { id: code, name: data.name || 'Grupp', currency: data.currency || 'SEK', members: data.members || {}, createdAt: data.createdAt || Date.now(), updatedAt: data.updatedAt || Date.now() }, expenses: {} };
+        persist(); hideNotice();
+        openGroup(code);
+      } catch (err) {
+        state.pendingJoin = null;
+        onRemoteError(err);
+        showNotice(`Kunde inte hämta gruppen <strong>${esc(code)}</strong>. Försök igen om en stund.`, true);
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Hjälpfunktioner
+    // ------------------------------------------------------------------
+    function currentGroup() { return state.gid ? state.groups[state.gid] : null; }
+    function memberIds(g) { return g ? Object.keys(g.meta.members).sort((a, b) => (g.meta.members[a].order ?? 0) - (g.meta.members[b].order ?? 0) || (g.meta.members[a].createdAt ?? 0) - (g.meta.members[b].createdAt ?? 0) || a.localeCompare(b)) : []; }
+    function usedMemberIds(g) { const s = new Set(); for (const e of Object.values(g.expenses)) { s.add(e.paidBy); (e.participants || []).forEach((id) => s.add(id)); } return s; }
+    function orderedGroupIds() { const known = Object.keys(state.groups); return [...state.order.filter((id) => state.groups[id]), ...known.filter((id) => !state.order.includes(id))]; }
+    function touchOrder(gid) { state.order = [gid, ...state.order.filter((x) => x !== gid)]; }
+    function persist() { saveJSON(LS.groups, state.groups); saveJSON(LS.me, state.me); saveJSON(LS.order, state.order); saveJSON(LS.pending, state.pending); }
+    function loadJSON(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } }
+    function saveJSON(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+    function populateCurrencies() { el.newGroupCurrency.innerHTML = CURRENCIES.map(([c, n]) => `<option value="${c}">${c} – ${n}</option>`).join(''); }
+    function todayISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+    function dateLabel(iso) {
+      if (!iso) return 'Utan datum';
+      const today = todayISO();
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      const yesterday = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
+      if (iso === today) return 'Idag';
+      if (iso === yesterday) return 'Igår';
+      const d = new Date(iso + 'T12:00:00');
+      if (isNaN(d)) return iso;
+      const opts = { weekday: 'short', day: 'numeric', month: 'short' };
+      if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+      return d.toLocaleDateString('sv-SE', opts);
+    }
+    function uid(n) { const arr = new Uint8Array(n); crypto.getRandomValues(arr); return Array.from(arr, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join(''); }
+    function normalizeCode(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); }
+    function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function initials(name) { const p = String(name || '?').trim().split(/\s+/); return (p[0][0] || '?') + (p.length > 1 ? p[p.length - 1][0] : ''); }
+    function nameOf(m) { return m ? m.name : 'Borttagen'; }
+    function avatar(m, id, size) { return `<span class="avatar ${size || ''}" style="background:${m && m.color ? m.color : 'var(--label3)'}" aria-hidden="true">${esc(initials(m ? m.name : '?'))}</span>`; }
+    function chip(m, id, on, kind, solid) { return `<button class="chip ${solid ? 'solid' : ''} ${on ? 'on' : ''}" type="button" data-${kind}="${esc(id)}" aria-pressed="${on}">${avatar(m, id, 'sm')}${esc(nameOf(m))}</button>`; }
+    function chevron() { return `<svg class="chevron" viewBox="0 0 8 13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 1.5l5 5-5 5"/></svg>`; }
+    function netClass(n) { return n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero'; }
+    function signed(n, cur) { const s = C.formatCents(Math.abs(n), cur); return n > 0 ? `+${s}` : n < 0 ? `−${s}` : s; }
+    function groupColor(gid) { let h = 0; for (const c of gid) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 65% 50%)`; }
+    function shareUrl(gid) { return `${location.origin}${location.pathname}?g=${gid}`; }
+    function showNotice(html, isError) { el.homeNotice.hidden = false; el.homeNotice.innerHTML = `<div class="row"><span class="body" style="font-size:15px;${isError ? 'color:var(--red)' : ''}">${html}</span><button class="nav-btn" type="button" id="noticeClose" aria-label="Stäng">✕</button></div>`; $('noticeClose').addEventListener('click', hideNotice); }
+    function hideNotice() { el.homeNotice.hidden = true; el.homeNotice.innerHTML = ''; }
+    let toastTimer = null;
+    function toast(msg) { el.toast.textContent = msg; el.toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.toast.classList.remove('show'), 2200); }
+  </script>
+</body>
+</html>

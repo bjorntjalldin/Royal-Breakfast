@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3FA0FF"/>
+      <stop offset="1" stop-color="#0A5BD8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+  <!-- Kvitto -->
+  <path d="M156 96h200a16 16 0 0 1 16 16v298l-27-20-27 20-27-20-27 20-27-20-27 20-27-20-27 20V112a16 16 0 0 1 16-16z" fill="#fff" opacity="0.96"/>
+  <rect x="190" y="160" width="132" height="18" rx="9" fill="#0A5BD8" opacity="0.85"/>
+  <rect x="190" y="206" width="96" height="18" rx="9" fill="#0A5BD8" opacity="0.35"/>
+  <rect x="190" y="252" width="132" height="18" rx="9" fill="#0A5BD8" opacity="0.35"/>
+  <!-- Delningslinje -->
+  <path d="M190 300h132" stroke="#0A5BD8" stroke-opacity="0.35" stroke-width="6" stroke-dasharray="14 12" stroke-linecap="round"/>
+  <rect x="190" y="326" width="80" height="22" rx="11" fill="#0A5BD8"/>
+  <rect x="284" y="326" width="38" height="22" rx="11" fill="#34C759"/>
+</svg>
