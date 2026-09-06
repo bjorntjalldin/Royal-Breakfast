@@ -10,8 +10,8 @@
 // Dessa värden är publika klientidentifierare (ingen hemlighet) – åtkomsten
 // styrs av Firestore-reglerna. Lämna fältet tomt/oförändrat så kör appen lokalt.
 window.NOTAN_FIREBASE_CONFIG = {
-  apiKey: "DIN_API_KEY",
-  authDomain: "DITT_PROJEKT.firebaseapp.com",
-  projectId: "DITT_PROJEKT",
-  appId: "DITT_APP_ID"
+  apiKey: "AIzaSyACsGZU-oyPO_HMo-QdYbGWD7aPNM_5ggM",
+  authDomain: "costsplit-35728.firebaseapp.com",
+  projectId: "costsplit-35728",
+  appId: "1:600576663109:web:788a805c8ece8923f70d2c"
 };
